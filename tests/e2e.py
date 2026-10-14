@@ -50,7 +50,7 @@ with sync_playwright() as p:
     ok("SAP meldet Quartalszahlen" in pg.inner_text("section[data-view=zeitung]"), "Aktienzeitung über den Server")
     pg.screenshot(path="shots/30_zeitung.png", full_page=True)
     # Kursalarm + Mail an
-    pg.evaluate("SH.showView('alarme')"); pg.select_option("#alType","above"); pg.fill("#alVal","200"); pg.click("#alForm button[type=submit]"); settle()
+    pg.evaluate("SH.showView('alarme')"); pg.check('#alSyms [data-alsym="OV:STOCK:DE0007164600"]'); pg.select_option("#alType","above"); pg.fill("#alVal","200"); pg.click("#alForm button[type=submit]"); settle()
     ok(psql("select type||':'||value from fin.price_alerts") == "above:200.000000", "Alarm in der DB")
     pg.evaluate("SH.showView('einstellungen','setmail')"); pg.check("#mOn"); pg.click("#mSave"); pg.wait_for_function("document.getElementById('mMsg').textContent.indexOf('an')>=0")
     ok(psql("select alert_mail from fin.users") == "t", "Mail-Alarme eingeschaltet")

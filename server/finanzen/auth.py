@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from . import db, totp
 from .config import settings
-from .mail import send_mail
+from .mail import mail_duplicate, mail_reset, mail_verify
 
 COOKIE = "fin_session"
 router = APIRouter(prefix="/api/auth")
@@ -202,14 +202,9 @@ def _mail_link(req: Request, uid, email: str, name: str, kind: str) -> None:
         c.execute("SELECT fin.auth_token_create(%s, %s, %s, %s)", (uid, kind, _hash_token(tok), VERIFY_MIN if kind == "verify" else RESET_MIN))
     link = f"{_base_url(req)}/#{kind}={tok}"
     if kind == "verify":
-        send_mail(email, "Bitte bestätige deine E-Mail-Adresse",
-                  f"Hallo {name},\n\nwillkommen bei Meine Finanzen! Bitte bestätige deine E-Mail-Adresse mit diesem Link:\n\n{link}\n\n"
-                  "Der Link gilt 48 Stunden. Wenn du dich nicht angemeldet hast, ignoriere diese Mail einfach.\n\n-- \nMeine Finanzen · Smooth Solutions\n")
+        mail_verify(email, name, link)
     else:
-        send_mail(email, "Passwort zurücksetzen",
-                  f"Hallo {name},\n\nfür dein Konto bei Meine Finanzen wurde ein neues Passwort angefordert. Hier kannst du es festlegen:\n\n{link}\n\n"
-                  "Der Link gilt 60 Minuten und funktioniert nur einmal. Wenn du das nicht warst, ignoriere diese Mail – dein Passwort bleibt dann unverändert.\n\n"
-                  "-- \nMeine Finanzen · Smooth Solutions\n")
+        mail_reset(email, name, link)
 
 
 def _mail_limit(req: Request, email: str) -> None:
@@ -279,9 +274,7 @@ def register(body: RegisterIn, req: Request, resp: Response):
         # Mit Mail-Bestätigung verraten wir nicht, ob es die Adresse schon gibt: der Inhaber bekommt einen Hinweis
         try:
             _mail_limit(req, email)
-            send_mail(email, "Anmeldeversuch bei Meine Finanzen",
-                      "Hallo,\n\njemand wollte mit deiner E-Mail-Adresse ein neues Konto anlegen. Du hast bereits eines.\n"
-                      f"Passwort vergessen? Hier kannst du es zurücksetzen: {_base_url(req)}/#forgot\n\n-- \nMeine Finanzen · Smooth Solutions\n")
+            mail_duplicate(email, f"{_base_url(req)}/#forgot")
         except Exception:
             pass
         return {"ok": True, "verify": True, "email": email}

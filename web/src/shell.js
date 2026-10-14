@@ -12,9 +12,9 @@ var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){r
 var P={name:"",email:"",id:""},USER={},D=null,REG=null,started=false;
 var FINm=null,DEPm=null;   /* werden nach dem Laden der Module gesetzt */
 
-var VIEWS={uebersicht:"Übersicht",konten:"Konten & Buchungen",auftraege:"Daueraufträge",kredite:"Kredite",plan:"Finanzplan",auswertung:"Auswertung Finanzen",
+var VIEWS={dashboard:"Dashboard",uebersicht:"Übersicht",konten:"Konten & Buchungen",auftraege:"Daueraufträge",kredite:"Kredite",plan:"Finanzplan",auswertung:"Auswertung Finanzen",
   depot:"Depot",zeitung:"Aktienzeitung",position:"Position",watchlist:"Watchlist",alarme:"Kursalarme",neu:"Erfassen & Import",dauswertung:"Auswertung Depot",einstellungen:"Einstellungen"};
-var OWNER={uebersicht:"fin",konten:"fin",auftraege:"fin",kredite:"fin",plan:"fin",auswertung:"fin",depot:"dep",zeitung:"dep",position:"dep",watchlist:"dep",alarme:"dep",neu:"dep",dauswertung:"dep",einstellungen:"both"};
+var OWNER={dashboard:"dash",uebersicht:"fin",konten:"fin",auftraege:"fin",kredite:"fin",plan:"fin",auswertung:"fin",depot:"dep",zeitung:"dep",position:"dep",watchlist:"dep",alarme:"dep",neu:"dep",dauswertung:"dep",einstellungen:"both"};
 var curView="uebersicht",stale={fin:false,dep:false};
 
 /* ---------- Server ---------- */
@@ -88,6 +88,7 @@ function pending(){if(!D||!SYNC.snap)return false;if(SYNC.inflight||SYNC.timer)r
 function changed(mod,light){
   if(!D)return;
   if(mod)stale[mod==="fin"?"dep":"fin"]=true;
+  renderDashSoon();
   if(reconcileCash()){FINm.touch();if(OWNER[curView]!=="dep")FINm.render();else stale.fin=true}
   if(PREVIEW){setSync("preview");return}
   schedule(light?1500:600);
@@ -177,7 +178,7 @@ document.addEventListener("change",function(e){
 /* ---------- Navigation ---------- */
 function setDrawer(open){$("side").classList.toggle("open",open);$("backdrop").hidden=!open;$("menuBtn").setAttribute("aria-expanded",open?"true":"false")}
 function showView(v,anchor){
-  if(!VIEWS[v])v="uebersicht";curView=v;
+  if(!VIEWS[v])v="dashboard";curView=v;
   var own=OWNER[v];
   if((own==="fin"||own==="both")&&stale.fin){stale.fin=false;FINm.render()}
   if((own==="dep"||own==="both")&&stale.dep){stale.dep=false;DEPm.render()}
@@ -186,6 +187,7 @@ function showView(v,anchor){
   $("viewTitle").textContent=VIEWS[v];document.title=VIEWS[v]+" · Meine Finanzen";setDrawer(false);
   try{if(location.hash!=="#"+v)history.replaceState(null,"","#"+v)}catch(e){}
   if(v==="einstellungen")renderShellSettings();
+  if(v==="dashboard")renderDash();
   DEPm.onView(v,anchor);
   var el=anchor&&$(anchor);
   if(el){if(el.tagName==="DETAILS")el.open=true;setTimeout(function(){try{el.scrollIntoView({block:"start"})}catch(e){}},0)}
@@ -228,7 +230,13 @@ function download(name,text,type){
   if(EMBED)return false;
   try{var blob=new Blob([text],{type:type||"text/plain"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(url);a.remove()},1000);return true}catch(e){return false}
 }
-function renderAll(){if(!D)return;FINm.render();DEPm.render();stale.fin=stale.dep=false;renderHead();if(curView==="einstellungen")renderShellSettings()}
+function renderAll(){if(!D)return;FINm.render();DEPm.render();stale.fin=stale.dep=false;renderHead();if(curView==="einstellungen")renderShellSettings();renderDash()}
+var dashT=null;
+function renderDash(){
+  try{var F=window.FIN&&FIN.summary&&D?FIN.summary():null;if(F){var v=0;F.accounts.forEach(function(a){v+=a.now});var dv=DEPm.value();$("nmDash").textContent=new Intl.NumberFormat("de-DE",{maximumFractionDigits:0}).format((v+(dv||0))/100)+" €"}}catch(e){}
+  if(curView==="dashboard"&&window.DASH)DASH.render();
+}
+function renderDashSoon(){clearTimeout(dashT);dashT=setTimeout(renderDash,250)}
 function renderHead(){
   $("profName").textContent=P.name;
   $("previewBar").hidden=!PREVIEW;
@@ -418,7 +426,7 @@ function applyServer(j,first){
     started=true;FINm.start();DEPm.start();
     $("boot").hidden=true;$("gate").hidden=true;$("app").hidden=false;
     applyLook();applySect();renderAll();
-    var hv=location.hash.slice(1);showView(VIEWS[hv]?hv:"uebersicht");
+    var hv=location.hash.slice(1);showView(VIEWS[hv]?hv:"dashboard");
     DEPm.refresh();checkLocalOld();
   } else {applyLook();renderAll()}
 }

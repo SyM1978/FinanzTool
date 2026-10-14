@@ -8,12 +8,13 @@ class H(socketserver.StreamRequestHandler):
         while True:
             line = self.rfile.readline()
             if not line: return
-            cmd = line.decode(errors="replace").strip()
+            raw = line.decode(errors="replace").rstrip("\r\n")
+            cmd = raw.strip()
             u = cmd.upper()
             if data is not None:
-                if cmd == ".":
+                if raw == ".":
                     open("/tmp/mf_mails/%f.eml" % time.time(), "w").write("\n".join(data)); data = None; self.w("250 OK")
-                else: data.append(cmd)
+                else: data.append(raw[1:] if raw.startswith("..") else raw)
                 continue
             if u.startswith("EHLO") or u.startswith("HELO"): self.w("250 fake")
             elif u.startswith("DATA"): data = []; self.w("354 go")

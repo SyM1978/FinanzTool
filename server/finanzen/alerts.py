@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from . import db, market
 from .auth import User, current_user
 from .config import settings
-from .mail import send_mail
+from .mail import mail_alerts, mail_test
 
 router = APIRouter(prefix="/api/alerts")
 
@@ -71,18 +71,16 @@ def run(verbose: bool = False) -> dict:
                 updates.append((True, a["mail_day"], a["id"]))     # wieder scharf
         err = None
         if hits:
-            lines = []
+            items = []
             for a, qq in hits:
                 ch = (qq["price"] / qq["prev"] - 1) * 100 if qq.get("prev") else 0
                 cond = {"above": "steigt auf " + de(float(a["value"])), "below": "fällt auf " + de(float(a["value"])),
-                        "dayDown": f"fällt heute um {de(float(a['value']), 1)} %", "dayUp": f"steigt heute um {de(float(a['value']), 1)} %",
-                        "dayMove": f"bewegt sich heute um ± {de(float(a['value']), 1)} %"}[a["type"]]
-                lines.append(f"• {a['name']}: {cond}\n  Kurs jetzt {de(qq['price'])} {qq.get('currency') or ''} ({'+' if ch >= 0 else ''}{de(ch, 1)} % heute)")
-            subj = f"Kursalarm: {hits[0][0]['name']}" if len(hits) == 1 else f"{len(hits)} Kursalarme in deinem Depot"
-            link = f"\n\n{settings.app_url.rstrip('/')}/#alarme" if settings.app_url else ""
+                        "dayDown": f"fällt heute um {de(float(a['value']), 1)}\u00a0%", "dayUp": f"steigt heute um {de(float(a['value']), 1)}\u00a0%",
+                        "dayMove": f"bewegt sich heute um ±\u00a0{de(float(a['value']), 1)}\u00a0%"}[a["type"]]
+                items.append({"name": a["name"], "cond": cond, "price": float(qq["price"]), "currency": qq.get("currency") or "", "change": ch})
+            link = f"{settings.app_url.rstrip('/')}/#alarme" if settings.app_url else ""
             try:
-                send_mail(us["email"], subj, f"Hallo {us['name']},\n\nfolgende Kursalarme haben ausgelöst:\n\n" + "\n\n".join(lines)
-                          + f"{link}\n\nKurse meist verzögert, ohne Gewähr.\n-- \nMeine Finanzen · Smooth Solutions\n")
+                mail_alerts(us["email"], us["name"], items, link)
                 total["sent"] += len(hits)
             except Exception as e:  # beim nächsten Lauf erneut versuchen
                 err = str(e)[:200]
@@ -104,7 +102,7 @@ def ep_testmail(u: User = Depends(current_user)):
     with db.tx(u.id) as c:
         r = c.execute("SELECT coalesce(alert_email, email)::text AS m FROM fin.users WHERE id = %s", (u.id,)).fetchone()
     try:
-        send_mail(r["m"], "Test von Meine Finanzen", f"Hallo {u.name},\n\ndiese Test-Mail zeigt: Kursalarme per E-Mail funktionieren.\n\n-- \nMeine Finanzen · Smooth Solutions\n")
+        mail_test(r["m"], u.name)
     except Exception as e:
         raise HTTPException(502, "Mail nicht verschickt: " + str(e)[:200])
     return {"ok": True, "email": r["m"]}
@@ -140,7 +138,7 @@ def main(argv) -> int:
                     print("Fehler:", e, flush=True)
             time.sleep(every - time.time() % every)
     if len(argv) >= 3 and argv[1] == "test":
-        send_mail(argv[2], "Test von Meine Finanzen", "Hallo,\n\nder Mailversand vom Server funktioniert.\n\n-- \nMeine Finanzen\n")
+        mail_test(argv[2])
         print("verschickt an", argv[2])
         return 0
     print(__doc__)

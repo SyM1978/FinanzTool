@@ -10,6 +10,16 @@ from fastapi.testclient import TestClient
 from finanzen.main import app
 from finanzen import alerts
 H = {"X-Requested-With": "finanzen"}
+
+def mail_text(raw):
+    """Textfassung einer Mail (auch bei HTML-Mails mit Logo)."""
+    import email as _em, email.header as _eh
+    m = _em.message_from_string(raw)
+    subj = str(_eh.make_header(_eh.decode_header(m["Subject"])))
+    for part in m.walk():
+        if part.get_content_type() == "text/plain":
+            return subj + "\n" + part.get_payload(decode=True).decode("utf-8")
+    return subj
 n = 0
 def check(c, m):
     global n
@@ -44,8 +54,8 @@ with TestClient(app) as A:
     A.post("/api/auth/profile", json={"alert_mail": True}, headers=H)
     r = alerts.run(); check(r == {"users": 1, "sent": 3, "errors": 0}, "drei Alarme (Allianz ±1 % nicht erreicht) " + str(r))
     mails = glob.glob("/tmp/mf_mails/*"); check(len(mails) == 1, "eine Sammelmail")
-    txt = open(mails[0]).read()
-    check("SAP SE: steigt auf 200,00" in txt and "Apple: steigt heute um 1,0 %" in txt and "Apple: bewegt sich heute um ± 1,0 %" in txt and "Allianz" not in txt and "https://finanzen.example.de/#alarme" in txt, txt[-600:])
+    txt = mail_text(open(mails[0]).read()); raw = open(mails[0]).read()
+    check("SAP SE: steigt auf 200,00" in txt and "Apple: steigt heute um 1,0\u00a0%" in txt and "Apple: bewegt sich heute um ±\u00a01,0\u00a0%" in txt and "Allianz" not in txt and "https://finanzen.example.de/#alarme" in txt and "text/html" in raw and "cid:logo" in raw and "Content-ID: <logo>" in raw, txt[-600:])
     r = alerts.run(); check(r["sent"] == 0, "nicht doppelt")
     psql("UPDATE fin.market_cache SET data = jsonb_set(data, '{price}', '150') WHERE key = 'q:OV:STOCK:DE0007164600'")
     alerts.run(); check(psql("SELECT mail_armed FROM fin.price_alerts WHERE id='a1'") == "t", "wieder scharf, wenn Kurs zurück")

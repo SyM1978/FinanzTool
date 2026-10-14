@@ -1,0 +1,27 @@
+  <!-- Dashboard -->
+  <section class="view" data-view="dashboard">
+    <div class="plantools"><h1 class="vtitle">Dashboard</h1><span class="hint" id="dbStand"></span></div>
+    <div class="dbkpis" id="dbKpis"></div>
+    <div class="grid">
+      <details class="card wide sect" data-sec="dbchart" open><summary><span>Vermögen im Zeitverlauf</span><span class="smeta" id="dbChartMeta"></span></summary>
+        <div class="chartbox" id="dbChart"></div>
+        <p class="hintline">Konten und Kredite: Stand am Monatsende, ab heute gestrichelt als Prognose aus Daueraufträgen, Gebühren und Zinsen. Das Depot ist mit dem heutigen Wert eingerechnet.</p>
+      </details>
+      <details class="card sect" data-sec="dbmonth" open><summary><span>Dieser Monat</span><span class="smeta" id="dbMonthMeta"></span></summary>
+        <div id="dbMonth"></div>
+      </details>
+      <details class="card sect" data-sec="dbsplit" open><summary><span>Wo das Geld liegt</span><span class="smeta" id="dbSplitMeta"></span></summary>
+        <div class="allocbar" id="dbSplitBar" role="img" aria-label="Aufteilung des Vermögens"></div>
+        <ul class="lst" id="dbSplitList"></ul>
+      </details>
+      <details class="card sect" data-sec="dbdepot" open><summary><span>Depot heute</span><span class="smeta" id="dbDepotMeta"></span></summary>
+        <div id="dbDepot"></div>
+      </details>
+      <details class="card sect" data-sec="dbgoals" open><summary><span>Kredite &amp; Sparziele</span><span class="smeta" id="dbGoalsMeta"></span></summary>
+        <div id="dbGoals"></div>
+      </details>
+      <details class="card wide sect" data-sec="dbsoon" open><summary><span>Demnächst</span><span class="smeta">nächste 14 Tage</span></summary>
+        <ul class="lst soon" id="dbSoon"></ul>
+      </details>
+    </div>
+  </section>

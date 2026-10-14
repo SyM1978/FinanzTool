@@ -250,14 +250,14 @@ dep_setdep = section(d_html, "setdep", "dep")
 
 top = rd(SRC, "shell_top.html").replace("%%NAV_FIN%%", fin_nav).replace("%%NAV_DEP%%", dep_nav)
 settings = rd(SRC, "shell_settings.html").replace("%%FIN_SETTINGS%%", fin_sets).replace("%%DEP_SETDEP%%", dep_setdep)
-body = top + "\n" + fin_views + "\n" + dep_views + "\n" + settings
+body = top + "\n" + rd(SRC, "dashboard.html") + "\n" + fin_views + "\n" + dep_views + "\n" + settings
 
 css = rd(DEP, "css_a.css")
 css = rep(css, "family=JetBrains+Mono:wght@400;600&", "family=JetBrains+Mono:wght@400;600&family=UnifrakturMaguntia&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&", where="css fonts")
 css = rep(css, "<title>Mein Zeitkonto</title>", "<title>Meine Finanzen</title>", where="css title")
 css += rd(DEP, "css_b.css") + rd(DEP, "css_c.css") + rd(DEP, "css_d.css") + rd(SRC, "extra.css") + "</style>\n\n"
 
-js = rd(SRC, "shell.js") + "\n" + fin_js + "\n" + dep_js + "\nSH.boot();\n"
+js = rd(SRC, "shell.js") + "\n" + fin_js + "\n" + dep_js + "\n" + rd(SRC, "dashboard.js") + "\nSH.boot();\n"
 page = css + body + "\n<script>\n" + js + "</script>\n"
 os.makedirs("out", exist_ok=True)
 open("out/app.js", "w", encoding="utf-8").write(js)

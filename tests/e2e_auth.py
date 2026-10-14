@@ -12,7 +12,8 @@ def last_link(kind, timeout=8):
     t0 = time.time()
     while time.time() - t0 < timeout:
         for f in sorted(glob.glob("/tmp/mf_mails/*"), reverse=True):
-            body = email.message_from_string(open(f).read()).get_payload(decode=True).decode()
+            m = email.message_from_string(open(f).read())
+            body = next(pt.get_payload(decode=True).decode() for pt in m.walk() if pt.get_content_type() == "text/plain")
             m = re.search(r"(http\S+#" + kind + r"=[A-Za-z0-9_\-]+)", body)
             if m: return m.group(1)
         time.sleep(0.3)

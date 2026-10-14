@@ -15,14 +15,22 @@ def check(c, m):
     n += 1
 psql = lambda q: subprocess.run(["psql", "-h", "/tmp", "-p", "5433", "-U", "postgres", "-d", "finanzen", "-tAq", "-c", q], capture_output=True, text=True).stdout.strip()
 psql("TRUNCATE fin.users, fin.market_cache CASCADE")
+
+def mail_text(raw):
+    """Textfassung einer Mail (auch bei HTML-Mails mit Logo)."""
+    import email as _em, email.header as _eh
+    m = _em.message_from_string(raw)
+    subj = str(_eh.make_header(_eh.decode_header(m["Subject"])))
+    for part in m.walk():
+        if part.get_content_type() == "text/plain":
+            return subj + "\n" + part.get_payload(decode=True).decode("utf-8")
+    return subj
 def clear():
     for f in glob.glob("/tmp/mf_mails/*"): os.remove(f)
 def mails():
     out = []
     for f in sorted(glob.glob("/tmp/mf_mails/*")):
-        import email
-        m = email.message_from_string(open(f).read())
-        out.append(str(email.header.make_header(email.header.decode_header(m["Subject"]))) + "\n" + m.get_payload(decode=True).decode("utf-8"))
+        out.append(mail_text(open(f).read()))
     return out
 def link(kind):
     for m in reversed(mails()):
