@@ -1,0 +1,10 @@
+# Lokal ausprobieren ohne HTTPS:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+#   → http://localhost:8000
+services:
+  app:
+    ports:
+      - "8000:8000"
+    environment:
+      COOKIE_SECURE: "0"
+      REGISTRATION: open

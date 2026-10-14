@@ -1,0 +1,7 @@
+[Unit]
+Description=Meine Finanzen – nächtliche Datenbanksicherung
+
+[Service]
+Type=oneshot
+User=postgres
+ExecStart=/bin/sh -c 'pg_dump -Fc finanzen > /var/backups/finanzen/finanzen-$(date +%%F).dump && find /var/backups/finanzen -name "finanzen-*.dump" -mtime +14 -delete'

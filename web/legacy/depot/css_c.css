@@ -1,0 +1,102 @@
+
+/* ---------- Finanzkonto ---------- */
+.eur{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.big.eur{font-size:clamp(34px,7vw,50px)}
+.acctiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:12px}
+.acct{position:relative;text-align:left;border:1px solid var(--line);background:var(--surface-2);border-radius:12px;padding:14px 16px 14px 20px;display:flex;flex-direction:column;gap:4px;min-width:0;overflow:hidden;font:inherit;color:inherit}
+.acct::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c,var(--accent))}
+button.acct:hover{border-color:var(--accent)}
+.acct .an{font-weight:600;font-size:14.5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.acct .an span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct b{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:22px;font-weight:600;line-height:1.25}
+.acct small{color:var(--muted);font-size:12.5px;line-height:1.35}
+.acct .goalbar{height:6px;margin-top:4px}
+.kind{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.cdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--accent));flex:none}
+.accpick{display:flex;flex-wrap:wrap;gap:6px}
+.accpick button{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);font-size:13.5px;font-weight:600;color:var(--muted)}
+.accpick button[aria-pressed="true"]{border-color:var(--accent);color:var(--ink);box-shadow:inset 0 0 0 1px var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px}
+.kpis .fc b{font-size:20px}
+.txlist td.r{white-space:nowrap}
+.txlist tr.fut td{color:var(--muted)}
+.txlist tr.fut td.amt{opacity:.8}
+.txlist tr.skip td{text-decoration:line-through;color:var(--muted)}
+.txlist tr.startrow td{color:var(--muted);font-style:italic}
+.txlist td .t2{display:block;font-size:12px;color:var(--muted)}
+.tag.plan{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}
+.tag.ok{background:var(--accent-soft);color:var(--accent)}
+.tag.fee{background:var(--warn-soft);color:var(--warn)}
+.tag.edit{background:var(--surface);color:var(--ink);border:1px dashed var(--muted)}
+.txform{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:12px;align-items:end}
+.txform .field label,.txform .field .flabel{font-size:12px;color:var(--muted)}
+.editbox{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.editbox h3{margin:0;font-family:var(--font-display);font-size:15px}
+input.amtin{text-align:right}
+.hintline{font-size:12.5px;color:var(--muted);margin:0}
+.lst{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.lst li{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.lst li:first-child{border-top:0}
+.lst .when{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);min-width:5.5em}
+.lst .what{flex:1 1 180px;min-width:0}
+.lst .what small{display:block;color:var(--muted);font-size:12.5px}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:600;font-size:13.5px;text-decoration:underline;text-underline-offset:3px}
+/* Finanzplan-Tabelle */
+.plantools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.planwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;max-width:100%}
+table.plan{min-width:1240px;font-size:13px;border-collapse:separate;border-spacing:0}
+table.plan th,table.plan td{padding:0;border-top:1px solid var(--line);white-space:nowrap}
+table.plan thead th{border-top:0;padding:8px 6px;text-align:right;background:var(--surface);position:sticky;top:0}
+table.plan th:first-child,table.plan td:first-child{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;min-width:250px;max-width:270px;border-right:1px solid var(--line)}
+table.plan thead th:first-child{z-index:2}
+table.plan td.v{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;padding:6px 8px}
+table.plan td.cell{padding:2px}
+table.plan td.cell input{border:1px solid transparent;background:transparent;text-align:right;padding:5px 6px;font-size:12.5px;width:84px;border-radius:6px}
+table.plan td.cell input:hover{border-color:var(--line)}
+table.plan td.cell input:focus{background:var(--surface);border-color:var(--accent);outline:none}
+table.plan td.cell input.zero{color:var(--muted)}
+table.plan tbody tr{cursor:default}
+table.plan tbody tr:hover{background:transparent}
+table.plan tr.ghead td{background:var(--surface-2);font-weight:600}
+table.plan tr.ghead td:first-child{background:var(--surface-2)}
+table.plan tr.pct td{color:var(--muted);font-size:11.5px}
+table.plan tr.pct td.v{padding-top:0;padding-bottom:4px}
+table.plan tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+table.plan tr.tot.res td.v{font-size:13.5px}
+table.plan tr.ksec td{background:var(--accent-soft);color:var(--accent);font-family:var(--font-display);font-weight:700;font-size:14px;padding:8px 10px}
+table.plan tr.ksec td:first-child{background:var(--accent-soft)}
+.nm{display:flex;align-items:center;gap:6px;padding:4px 6px 4px 10px}
+.nm input{border:1px solid transparent;background:transparent;font-family:var(--font-body);font-size:13px;padding:4px 6px;border-radius:6px;min-width:0;flex:1}
+.nm input:hover{border-color:var(--line)}
+.nm input:focus{background:var(--surface);border-color:var(--accent);outline:none}
+.nm .gname{font-weight:600}
+.ib{border:0;background:transparent;color:var(--muted);width:26px;height:26px;border-radius:6px;font-size:14px;flex:none;line-height:1}
+.ib:hover{background:var(--surface);color:var(--ink)}
+.ib.x:hover{color:var(--bad)}
+.istv{display:block;font-size:11px;color:var(--muted)}
+/* Import */
+.sugg{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:4px 16px}
+.sugg label{display:flex;align-items:flex-start;gap:8px;font-size:13.5px;padding:4px 0}
+.sugg label input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none}
+.sugg small{color:var(--muted)}
+.welcome{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.welcome .fc{gap:8px}
+.welcome .fc p{margin:0;color:var(--muted);font-size:13.5px}
+.gpass{display:flex;gap:8px}
+.gpass input{font-size:18px;letter-spacing:.2em;text-align:center}
+.lchart .debt{fill:none;stroke:var(--bad);stroke-width:2.5}
+.chartbox .minln{stroke:var(--bad);stroke-width:1.5;stroke-dasharray:2 4;opacity:.8}
+.chartbox .mintx{fill:var(--bad);font-family:var(--font-body);font-size:11px;font-weight:600}
+.colors{display:flex;flex-wrap:wrap;gap:6px}
+.colors label{display:inline-flex}
+.colors input{position:absolute;opacity:0;pointer-events:none}
+.colors span{width:28px;height:28px;border-radius:50%;background:var(--c);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.colors input:checked+span{box-shadow:0 0 0 2px var(--ink)}
+.colors input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+.loanbox{display:flex;flex-direction:column;gap:14px}
+:root[data-compact] .acct{padding:10px 12px 10px 16px}
+:root[data-compact] .acct b{font-size:18px}
+#repKpis .vt b{font-size:clamp(16px,2.2vw,20px);overflow-wrap:anywhere}
+.fc b{overflow-wrap:anywhere}
+@media (max-width:520px){.forecast .fc b,.kpis .fc b{font-size:17px}.big.eur{font-size:clamp(28px,9vw,40px)}}
+.dnote{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}

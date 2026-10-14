@@ -1,0 +1,466 @@
+<!-- Profilwahl -->
+<div class="gate" id="gate" hidden>
+  <div class="gatecard">
+    <div style="display:flex;flex-direction:column;gap:14px;text-align:center">
+      <img class="logotile" src="%%LOGO_FULL%%" alt="Smooth Solutions" width="403" height="424">
+      <div><h1>Mein Depot</h1><p class="sub">Dein Depot bleibt verschlüsselt in diesem Browser.</p></div>
+    </div>
+    <div class="banner" id="gCrypto" hidden><span><b>Verschlüsselung nicht verfügbar.</b> Öffne die Seite über https:// oder als lokale Datei.</span></div>
+    <div id="gChoose"><div class="plist" id="gList"></div></div>
+    <form class="gform" id="gPin" hidden novalidate>
+      <p class="pinhead">PIN für <b id="gPinName"></b></p>
+      <div class="gpass"><input type="password" id="gPinIn" autocomplete="current-password" inputmode="numeric" aria-label="PIN oder Passwort"><button class="btn primary" type="submit" id="gPinGo">Öffnen</button></div>
+      <p class="msg bad" id="gErr" aria-live="assertive" style="text-align:center"></p>
+      <div class="center"><button class="btn ghost" id="gBack" type="button">Anderes Profil</button></div>
+    </form>
+    <form class="gform" id="gNew" hidden novalidate>
+      <div class="field"><label for="gName">Profilname</label><input type="text" id="gName" maxlength="24" autocomplete="off" placeholder="z. B. Markus"></div>
+      <div class="field"><label for="gNewPin">PIN oder Passwort</label><input type="password" id="gNewPin" autocomplete="new-password"><span class="hint">Mindestens 4 Zeichen. Ohne PIN kommt niemand an die Daten, auch du nicht.</span></div>
+      <div class="field"><label for="gNewPin2">Wiederholen</label><input type="password" id="gNewPin2" autocomplete="new-password"></div>
+      <p class="msg bad" id="gNewErr" aria-live="assertive"></p>
+      <div class="row"><button class="btn primary" type="submit">Profil anlegen</button><button class="btn ghost" type="button" id="gNewCancel">Abbrechen</button></div>
+    </form>
+    <div class="center" id="gNewWrap"><button class="btn" id="gNewBtn" type="button">+ Neues Profil</button></div>
+    <p class="ver" style="text-align:center">Version <span class="appver"></span></p>
+  </div>
+</div>
+
+<!-- App -->
+<div class="shell" id="app" hidden>
+  <aside class="side" id="side" aria-label="Hauptmenü">
+    <div class="sidebrand">
+      <img class="mark" src="%%LOGO_HEAD%%" alt="Smooth Solutions" width="48" height="48">
+      <div><b>Mein Depot</b><span id="dateLine"></span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <a href="#depot" data-view="depot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/><path d="M15 6h4v4"/></svg><span>Depot</span><span class="nm" id="nmVal"></span></a>
+      <a href="#position" data-view="position"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M9.5 9.5c0-1.2 1.1-2 2.5-2s2.5.8 2.5 2-1.1 1.8-2.5 2.5-2.5 1.2-2.5 2.5 1.1 2 2.5 2 2.5-.8 2.5-2"/></svg><span>Positionen</span><span class="nm" id="nmPos"></span></a>
+      <a href="#zeitung" data-view="zeitung"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h13v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v9.5a2 2 0 0 1-2 2"/><path d="M7 9h7M7 12.5h7M7 16h4"/></svg><span>Aktienzeitung</span><span class="nm" id="nmNews"></span></a>
+      <a href="#watchlist" data-view="watchlist"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/></svg><span>Watchlist</span><span class="nm" id="nmWatch"></span></a>
+      <a href="#alarme" data-view="alarme"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Kursalarme</span><span class="nm" id="nmAlarm"></span></a>
+      <a href="#neu" data-view="neu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/></svg><span>Erfassen &amp; Import</span></a>
+      <a href="#auswertung" data-view="auswertung"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="6" y="11" width="3" height="6"/><rect x="11" y="7" width="3" height="10"/><rect x="16" y="13" width="3" height="4"/></svg><span>Auswertung &amp; Export</span></a>
+      <a href="#einstellungen" data-view="einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg><span>Einstellungen</span></a>
+    </nav>
+    <div class="sidefoot">
+      <button class="pill" id="lockBtn" type="button" title="Profil sperren"><span class="lock" aria-hidden="true"></span><span><b id="profName"></b> · sperren</span></button>
+      <span class="ver">Version <span class="appver"></span></span>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <div class="mainwrap">
+    <header class="mtop">
+      <button class="menubtn" id="menuBtn" type="button" aria-label="Menü öffnen" aria-controls="side" aria-expanded="false"><i></i><i></i><i></i></button>
+      <img class="mark" src="%%LOGO_HEAD%%" alt="" width="32" height="32">
+      <b id="viewTitle">Depot</b>
+    </header>
+  <div class="wrap">
+  <div class="banner" id="demoBar" hidden>
+    <span><b>Beispieldepot mit Spielkursen.</b> Leere es, bevor du deine eigenen Käufe einträgst.</span>
+    <button class="btn" id="clearDemo" type="button">Beispieldepot leeren</button>
+  </div>
+  <div class="banner" id="storeBar" hidden><span><b>Speichern nicht möglich.</b> Dieser Browser blockiert lokalen Speicher.</span></div>
+  <div class="alerts" id="alerts"></div>
+
+  <!-- Depot -->
+  <section class="view" data-view="depot">
+    <div class="plantools"><h1 class="vtitle">Depot</h1>
+      <div class="accpick" id="depSel" role="group" aria-label="Depot wählen" hidden></div>
+      <div class="qstat"><span id="qStat" aria-live="polite"></span><button class="btn" id="qRefresh" type="button">Kurse aktualisieren</button></div>
+    </div>
+    <details class="card sect" data-sec="welcome" id="welcome" hidden open><summary><span>Los geht’s</span></summary>
+      <div class="welcome">
+        <div class="fc"><span class="lbl">Erster Kauf</span><p>Aktie oder ETF suchen (Name, ISIN oder WKN) und Stückzahl und Kaufkurs von der Abrechnung eintragen.</p><button class="btn primary" type="button" data-go="neu">Kauf erfassen</button></div>
+        <div class="fc"><span class="lbl">Kurs-Server</span><p>Die Kurse kommen über ein kleines Python-Skript auf deinem Server. Hier prüfst du die Verbindung.</p><button class="btn" type="button" data-go="einstellungen#setapi">Verbindung prüfen</button></div>
+        <div class="fc"><span class="lbl">Erst mal schauen</span><p>Beispieldepot mit Spielkursen laden. Es lässt sich jederzeit leeren.</p><button class="btn" type="button" id="loadDemo">Beispieldepot laden</button></div>
+      </div>
+    </details>
+    <div class="grid">
+      <details class="card sect" data-sec="val" open><summary><span>Depotwert</span><span class="smeta" id="sumVal"></span></summary>
+        <div><span class="lbl">Aktueller Wert</span><div class="big eur" id="dVal">–</div></div>
+        <div class="forecast">
+          <div class="fc"><span class="lbl">Heute</span><b class="eur" id="dDay">–</b><small id="dDayPct"></small></div>
+          <div class="fc"><span class="lbl">Kursgewinn</span><b class="eur" id="dUnreal">–</b><small id="dUnrealPct"></small></div>
+          <div class="fc"><span class="lbl">Einstand</span><b class="eur" id="dCost">–</b><small>Kaufpreis inkl. Gebühren</small></div>
+          <div class="fc"><span class="lbl">Gesamt</span><b class="eur" id="dTotal">–</b><small id="dTotalSub"></small></div>
+        </div>
+      </details>
+      <details class="card sect" data-sec="alloc" open><summary><span>Aufteilung</span><span class="smeta" id="sumAlloc"></span></summary>
+        <div class="seg" id="allocMode" role="radiogroup" aria-label="Aufteilen nach">
+          <label><input type="radio" name="alm" value="pos" checked><span>Wertpapier</span></label>
+          <label><input type="radio" name="alm" value="sector"><span>Branche</span></label>
+          <label><input type="radio" name="alm" value="country"><span>Land</span></label>
+          <label><input type="radio" name="alm" value="cur"><span>Währung</span></label>
+          <label><input type="radio" name="alm" value="kind"><span>Art</span></label>
+        </div>
+        <div class="allocbar" id="allocBar" role="img" aria-label="Aufteilung des Depots"></div>
+        <ul class="lst alloclist" id="allocList"></ul>
+      </details>
+      <details class="card wide sect" data-sec="rows" open><summary><span>Positionen</span><span class="smeta" id="sumRows"></span></summary>
+        <div class="tablewrap"><table class="postab">
+          <thead><tr><th>Wertpapier</th><th class="r">Stück</th><th class="r">Kurs</th><th class="r">Heute</th><th class="r">Wert</th><th class="r">Gewinn/Verlust</th><th class="r">Anteil</th></tr></thead>
+          <tbody id="posBody"></tbody>
+        </table></div>
+      </details>
+      <details class="card wide sect" data-sec="dnews" open><summary><span>News zu deinem Depot</span><span class="smeta" id="dNewsMeta"></span></summary>
+        <ul class="lst newslist" id="dNews"></ul>
+        <p class="hintline">Schlagzeilen der letzten 14 Tage über Google News, nur Aktien (keine ETFs). Ein Klick öffnet den Artikel beim Herausgeber.</p>
+      </details>
+      <details class="card wide sect" data-sec="termine" open><summary><span>Termine</span><span class="smeta">nächste 60 Tage</span></summary>
+        <ul class="lst" id="evList"></ul>
+        <form class="row2" id="evForm" novalidate><input type="date" id="evDate" aria-label="Datum"><select id="evPos" aria-label="Wertpapier"></select><input type="text" id="evTitle" maxlength="60" placeholder="z. B. Hauptversammlung, Quartalszahlen" aria-label="Termin"><button class="btn" type="submit">Termin eintragen</button></form>
+        <p class="hintline">Erwartete Dividenden und Sparplan-Ausführungen erscheinen automatisch. Hauptversammlungen und Quartalszahlen trägst du selbst ein, dafür gibt es keine kostenlose Datenquelle.</p>
+        <p class="msg" id="evMsg" aria-live="polite"></p>
+      </details>
+      <details class="card wide sect" data-sec="dchart" open><summary><span>Depotverlauf</span><span class="smeta" id="dChartMeta"></span></summary>
+        <div class="cardhead">
+          <div class="seg" id="dRange" role="radiogroup" aria-label="Zeitraum">
+            <label><input type="radio" name="drg" value="1mo"><span>1 M</span></label>
+            <label><input type="radio" name="drg" value="6mo"><span>6 M</span></label>
+            <label><input type="radio" name="drg" value="1y" checked><span>1 J</span></label>
+            <label><input type="radio" name="drg" value="5y"><span>5 J</span></label>
+          </div>
+          <div class="legend"><span><i class="sw"></i>Depotwert</span><span><i class="sw goal"></i>Einstand</span><span><i class="sw bench"></i><span id="benchLbl">MSCI World</span></span></div>
+        </div>
+        <div class="chartbox" id="dChart"><p class="empty">Verlauf wird geladen …</p></div>
+        <p class="hintline">Aus Schlusskursen und deinem Bestand an jedem Tag. Die Vergleichslinie zeigt, was dieselben Käufe und Verkäufe im Vergleichs-ETF wert wären.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Position -->
+  <section class="view" data-view="position">
+    <h1 class="vtitle">Positionen</h1>
+    <div class="accpick" id="posPick" role="group" aria-label="Position wählen"></div>
+    <p class="empty" id="posNone" hidden>Noch keine Positionen. <button class="linkbtn" type="button" data-go="neu">Ersten Kauf erfassen</button></p>
+    <div class="grid" id="posGrid">
+      <details class="card sect" data-sec="pstate" open><summary><span id="pTitle">Position</span><span class="smeta" id="pMeta"></span></summary>
+        <div><span class="lbl" id="pPriceLbl">Kurs</span><div class="big eur" id="pPrice">–</div><p class="hintline" id="pPriceSub"></p></div>
+        <div class="forecast">
+          <div class="fc"><span class="lbl">Bestand</span><b id="pShares">–</b><small id="pAvg"></small></div>
+          <div class="fc"><span class="lbl">Wert</span><b class="eur" id="pValue">–</b><small id="pDay"></small></div>
+          <div class="fc"><span class="lbl">Kursgewinn</span><b class="eur" id="pUnreal">–</b><small id="pUnrealPct"></small></div>
+          <div class="fc"><span class="lbl">Dividenden &amp; Verkäufe</span><b class="eur" id="pReal">–</b><small id="pRealSub"></small></div>
+        </div>
+      </details>
+      <details class="card sect" data-sec="pchart" open><summary><span>Kursverlauf</span><span class="smeta" id="pChartMeta"></span></summary>
+        <div class="cardhead">
+          <div class="seg" id="pRange" role="radiogroup" aria-label="Zeitraum">
+            <label><input type="radio" name="prg" value="1mo"><span>1 M</span></label>
+            <label><input type="radio" name="prg" value="6mo"><span>6 M</span></label>
+            <label><input type="radio" name="prg" value="1y" checked><span>1 J</span></label>
+            <label><input type="radio" name="prg" value="5y"><span>5 J</span></label>
+          </div>
+          <div class="legend"><span><i class="sw"></i>Kurs</span><span><i class="sw goal"></i>dein Ø-Einstand</span></div>
+        </div>
+        <div class="chartbox" id="pChart"></div>
+      </details>
+      <details class="card sect" data-sec="pfig" open><summary><span>Kennzahlen</span><span class="smeta" id="pFigMeta"></span></summary>
+        <div class="kpis" id="pFig"></div>
+        <p class="hintline">Aus dem Kursverlauf berechnet. KGV und Dividendenrendite liefert die kostenlose Quelle nicht.</p>
+      </details>
+      <details class="card wide sect" data-sec="pnews" open><summary><span>News</span><span class="smeta" id="pNewsMeta"></span></summary>
+        <ul class="lst newslist" id="pNews"></ul>
+      </details>
+      <details class="card wide sect" data-sec="ptx" open><summary><span>Käufe, Verkäufe, Dividenden</span><span class="smeta" id="pTxMeta"></span></summary>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Datum</th><th>Art</th><th class="r">Stück</th><th class="r">Kurs</th><th class="r">Gebühren</th><th class="r">Betrag</th></tr></thead>
+          <tbody id="pTxBody"></tbody>
+        </table></div>
+      </details>
+      <details class="card sect" data-sec="ptxform" open><summary><span id="txFormTitle">Buchung hinzufügen</span></summary>
+        <form id="txForm" novalidate>
+          <div class="seg" id="txType" role="radiogroup" aria-label="Art" style="margin-bottom:12px">
+            <label><input type="radio" name="txt" value="buy" checked><span>Kauf</span></label>
+            <label><input type="radio" name="txt" value="sell"><span>Verkauf</span></label>
+            <label><input type="radio" name="txt" value="div"><span>Dividende</span></label>
+          </div>
+          <div class="txform">
+            <div class="field"><label for="tDate">Datum</label><input type="date" id="tDate"></div>
+            <div class="field tq"><label for="tQty">Stück</label><input type="text" id="tQty" class="amtin" inputmode="decimal" placeholder="z. B. 10 oder 1,2345"></div>
+            <div class="field tq"><label for="tPrice">Kurs je Stück (€)</label><input type="text" id="tPrice" class="amtin" inputmode="decimal"></div>
+            <div class="field tq"><label for="tFee">Gebühren (€)</label><input type="text" id="tFee" class="amtin" inputmode="decimal" placeholder="0,00"></div>
+            <div class="field td" hidden><label for="tAmt">Betrag (€)</label><input type="text" id="tAmt" class="amtin" inputmode="decimal" placeholder="brutto"></div>
+          </div>
+          <p class="hintline" id="tHint">Werte wie auf deiner Abrechnung, in Euro.</p>
+          <p class="msg" id="txMsg" aria-live="polite"></p>
+          <div class="row">
+            <button class="btn primary" type="submit" id="txSave">Hinzufügen</button>
+            <button class="btn danger" type="button" id="txDel" hidden>Löschen</button>
+            <button class="btn ghost" type="button" id="txCancel" hidden>Abbrechen</button>
+          </div>
+        </form>
+      </details>
+      <details class="card sect" data-sec="pedit" data-default="closed"><summary><span>Position bearbeiten</span></summary>
+        <div class="txform">
+          <div class="field span2"><label for="eName">Name</label><input type="text" id="eName" maxlength="60"></div>
+          <div class="field"><label for="eSym">Kürzel</label><input type="text" id="eSym" maxlength="24" autocapitalize="characters"></div>
+          <div class="field"><label for="eIsin">ISIN (optional)</label><input type="text" id="eIsin" maxlength="12" autocapitalize="characters"></div>
+          <div class="field"><label for="eKind">Art (für die Steuer)</label><select id="eKind"></select></div>
+          <div class="field"><label for="eSector">Branche</label><select id="eSector"></select></div>
+          <div class="field"><label for="eCountry">Land</label><input type="text" id="eCountry" maxlength="30" list="countryList"></div>
+          <div class="field"><label for="eDepot">Depot</label><select id="eDepot"></select></div>
+        </div>
+        <datalist id="countryList"></datalist>
+        <div class="row"><button class="btn" id="eSave" type="button">Speichern</button><button class="btn danger" id="eDel" type="button">Position löschen</button></div>
+        <p class="msg" id="eMsg" aria-live="polite"></p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Kauf erfassen -->
+  <section class="view" data-view="neu">
+    <h1 class="vtitle">Erfassen &amp; Import</h1>
+    <div class="grid">
+      <details class="card sect" data-sec="search" open><summary><span>1 · Wertpapier finden</span></summary>
+        <form class="gpass" id="sForm" novalidate role="search"><input type="text" id="sQ" placeholder="Name, ISIN oder WKN, z. B. SAP oder DE0007164600" aria-label="Suche" style="letter-spacing:0;text-align:left;font-size:15px"><button class="btn primary" type="submit">Suchen</button></form>
+        <ul class="lst" id="sRes"></ul>
+        <p class="hintline">Am sichersten mit <b>ISIN</b> oder <b>WKN</b> von deiner Abrechnung. Kurse kommen in Euro von deutschen Handelsplätzen.</p>
+        <p class="msg" id="sMsg" aria-live="polite"></p>
+      </details>
+      <details class="card sect" data-sec="buy" open><summary><span>2 · Kauf eintragen</span></summary>
+        <form id="nForm" novalidate>
+          <div class="txform">
+            <div class="field span2"><label for="nName">Wertpapier</label><input type="text" id="nName" maxlength="60" placeholder="aus der Suche oder selbst eintragen"></div>
+            <div class="field"><label for="nSym">Kürzel</label><input type="text" id="nSym" maxlength="24" autocapitalize="characters" placeholder="kommt aus der Suche"></div>
+            <div class="field"><label for="nIsin">ISIN (optional)</label><input type="text" id="nIsin" maxlength="12" autocapitalize="characters"></div>
+            <div class="field"><label for="nDate">Kaufdatum</label><input type="date" id="nDate"></div>
+            <div class="field"><label for="nQty">Stück</label><input type="text" id="nQty" class="amtin" inputmode="decimal"></div>
+            <div class="field"><label for="nPrice">Kurs je Stück (€)</label><input type="text" id="nPrice" class="amtin" inputmode="decimal"></div>
+            <div class="field"><label for="nFee">Gebühren (€)</label><input type="text" id="nFee" class="amtin" inputmode="decimal" placeholder="0,00"></div>
+            <div class="field"><label for="nDepot">Depot</label><select id="nDepot"></select></div>
+          </div>
+          <p class="hintline" id="nHint">Gibt es das Wertpapier schon im Depot, wird der Kauf dort ergänzt.</p>
+          <p class="msg" id="nMsg" aria-live="polite"></p>
+          <div class="row"><button class="btn primary" type="submit">Kauf speichern</button></div>
+        </form>
+      </details>
+      <details class="card wide sect" data-sec="plans" id="plans" open><summary><span>Sparpläne</span><span class="smeta" id="plMeta"></span></summary>
+        <ul class="lst" id="planList"></ul>
+        <form class="editbox" id="planForm" novalidate>
+          <h3 id="planFormTitle">Neuer Sparplan</h3>
+          <div class="txform">
+            <div class="field span2"><label for="plPos">Wertpapier</label><select id="plPos"></select></div>
+            <div class="field"><label for="plAmt">Rate (€)</label><input type="text" id="plAmt" class="amtin" inputmode="decimal" placeholder="z. B. 100"></div>
+            <div class="field"><label for="plFee">Gebühr je Ausführung (€)</label><input type="text" id="plFee" class="amtin" inputmode="decimal" placeholder="0,00"></div>
+            <div class="field"><label for="plInt">Rhythmus</label><select id="plInt"><option value="m">monatlich</option><option value="q">vierteljährlich</option></select></div>
+            <div class="field"><label for="plDay">Ausführung am</label><select id="plDay"></select></div>
+            <div class="field"><label for="plStart">Erste Ausführung ab</label><input type="date" id="plStart"></div>
+            <div class="field"><label for="plEnd">Ende (optional)</label><input type="date" id="plEnd"></div>
+          </div>
+          <p class="hintline">Fällige Raten werden automatisch zum Schlusskurs des Ausführungstags gebucht, auch rückwirkend ab dem Startdatum. Fällt der Tag aufs Wochenende, gilt der folgende Montag. Das Wertpapier muss schon im Depot sein.</p>
+          <p class="msg" id="planMsg" aria-live="polite"></p>
+          <div class="row"><button class="btn primary" type="submit" id="planSave">Sparplan anlegen</button><button class="btn danger" type="button" id="planDel" hidden>Löschen</button><button class="btn ghost" type="button" id="planCancel" hidden>Abbrechen</button></div>
+        </form>
+      </details>
+      <details class="card wide sect" data-sec="csv" id="csvimp" open><summary><span>Import aus CSV</span></summary>
+        <p class="note">Lies den CSV-Export deiner Bank oder deines Brokers ein. Die Spalten werden erkannt, du kannst sie vor dem Import anpassen. Nötig sind Datum, ISIN, Art (Kauf, Verkauf, Dividende), Stück und Kurs bzw. Betrag.</p>
+        <div class="form">
+          <div class="field"><label for="csvFile">CSV-Datei</label><input type="file" id="csvFile" accept=".csv,.txt,text/csv"></div>
+          <div class="field"><label for="csvDepot">In Depot</label><select id="csvDepot"></select></div>
+        </div>
+        <div class="field"><label for="csvTxt">Oder Inhalt einfügen</label><textarea id="csvTxt" spellcheck="false" placeholder="Datum;ISIN;Name;Typ;Stück;Kurs;Gebühren;Betrag"></textarea></div>
+        <div class="row"><button class="btn" id="csvRead" type="button">Einlesen</button></div>
+        <div id="csvMapWrap" hidden class="editbox">
+          <h3>Spalten zuordnen</h3>
+          <div class="txform" id="csvMap"></div>
+          <label class="check"><input type="checkbox" id="csvHead" checked> Erste Zeile ist Überschrift</label>
+          <div class="tablewrap"><table><thead><tr><th>Zeile</th><th>Datum</th><th>ISIN</th><th>Art</th><th class="r">Stück</th><th class="r">Kurs</th><th class="r">Gebühr</th><th class="r">Betrag</th><th>Prüfung</th></tr></thead><tbody id="csvPrev"></tbody></table></div>
+          <div class="row"><button class="btn primary" id="csvGo" type="button">Importieren</button></div>
+        </div>
+        <p class="msg" id="csvMsg" aria-live="polite"></p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Aktienzeitung -->
+  <section class="view" data-view="zeitung">
+    <article class="paper" aria-labelledby="ztTitle">
+      <header class="pp-mast">
+        <div class="pp-ears"><span id="ztEarL">Ausgabe für Markus</span><span id="ztEarR"></span></div>
+        <h1 class="pp-title" id="ztTitle">Die Aktienzeitung</h1>
+        <div class="pp-dateline"><span id="ztDate"></span><span id="ztNo"></span><span>Nur Meldungen von heute</span></div>
+      </header>
+      <div class="pp-ticker" id="ztTicker" aria-label="Kurszettel"></div>
+      <div class="pp-tools noprint"><span class="pp-stat" id="ztStat"></span><label class="check"><input type="checkbox" id="ztWatch" checked> Watchlist einbeziehen</label><button class="btn" id="ztReload" type="button">Neu laden</button></div>
+      <section class="pp-lead" id="ztLead"></section>
+      <div class="pp-cols" id="ztCols"></div>
+      <footer class="pp-foot">Schlagzeilen über Google News · Kurse meist verzögert · Ein Klick öffnet den Artikel beim Herausgeber</footer>
+    </article>
+  </section>
+
+  <!-- Watchlist -->
+  <section class="view" data-view="watchlist">
+    <h1 class="vtitle">Watchlist</h1>
+    <div class="grid">
+      <details class="card wide sect" data-sec="wl" open><summary><span>Beobachtete Werte</span><span class="smeta" id="wlMeta"></span></summary>
+        <div class="tablewrap"><table class="postab">
+          <thead><tr><th>Wertpapier</th><th class="r">Kurs</th><th class="r">Heute</th><th>Notiz</th><th class="r">Aktion</th></tr></thead>
+          <tbody id="wlBody"></tbody>
+        </table></div>
+      </details>
+      <details class="card wide sect" data-sec="wladd" open><summary><span>Wert hinzufügen</span></summary>
+        <form class="gpass" id="wForm" novalidate role="search"><input type="text" id="wQ" placeholder="Name, ISIN oder WKN" aria-label="Suche" style="letter-spacing:0;text-align:left;font-size:15px"><button class="btn primary" type="submit">Suchen</button></form>
+        <ul class="lst" id="wRes"></ul>
+        <p class="msg" id="wMsg" aria-live="polite"></p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Kursalarme -->
+  <section class="view" data-view="alarme">
+    <h1 class="vtitle">Kursalarme</h1>
+    <div class="grid">
+      <details class="card wide sect" data-sec="allist" open><summary><span>Deine Alarme</span><span class="smeta" id="alMeta"></span></summary>
+        <ul class="lst" id="alList"></ul>
+        <p class="hintline" id="alMailState"></p>
+      </details>
+      <details class="card wide sect" data-sec="aladd" open><summary><span>Neuer Alarm</span></summary>
+        <form id="alForm" novalidate>
+          <div class="txform">
+            <div class="field span2"><label for="alSym">Wertpapier</label><select id="alSym"></select></div>
+            <div class="field"><label for="alType">Wenn der Kurs …</label><select id="alType"><option value="below">fällt auf oder unter</option><option value="above">steigt auf oder über</option><option value="dayDown">heute fällt um mindestens (%)</option><option value="dayUp">heute steigt um mindestens (%)</option></select></div>
+            <div class="field"><label for="alVal" id="alValLbl">Kurs (€)</label><input type="text" id="alVal" class="amtin" inputmode="decimal"></div>
+          </div>
+          <p class="hintline" id="alHint"></p>
+          <p class="msg" id="alMsg" aria-live="polite"></p>
+          <div class="row"><button class="btn primary" type="submit">Alarm anlegen</button><button class="btn" type="button" id="alNotify">Browser-Benachrichtigungen erlauben</button></div>
+        </form>
+      </details>
+    </div>
+  </section>
+
+  <!-- Auswertung -->
+  <section class="view" data-view="auswertung">
+    <h1 class="vtitle">Auswertung &amp; Export</h1>
+    <div class="grid">
+      <details class="card sect" data-sec="perf" open><summary><span>Rendite</span><span class="smeta" id="perfMeta"></span></summary>
+        <div class="kpis" id="perfKpis"></div>
+        <p class="note" id="perfNote"></p>
+      </details>
+      <details class="card sect" data-sec="divs" open><summary><span>Dividenden</span><span class="smeta" id="divMeta"></span></summary>
+        <div class="divbars" id="divBars" role="img" aria-label="Erwartete Dividenden der nächsten 12 Monate"></div>
+        <ul class="lst" id="divList"></ul>
+        <p class="hintline">Prognose: jede Dividende der letzten 12 Monate noch einmal, hochgerechnet auf deinen heutigen Bestand.</p>
+      </details>
+    </div>
+    <details class="card sect" data-sec="year" open><summary><span>Jahresübersicht</span><span class="smeta" id="yMeta"></span></summary>
+      <div class="monthnav"><button class="navbtn" id="yPrev" type="button" aria-label="Vorheriges Jahr">‹</button><span id="yLbl"></span><button class="navbtn" id="yNext" type="button" aria-label="Nächstes Jahr">›</button></div>
+      <div class="vacgrid" id="yKpis"></div>
+      <h3 class="sechead">Steuerschätzung</h3>
+      <div>
+        <div class="goalbar" role="progressbar" aria-label="Sparer-Pauschbetrag genutzt" id="aBar" aria-valuemin="0" aria-valuemax="100"><div class="fill" id="aFill"></div></div>
+        <div class="goalmeta" style="margin-top:6px"><span id="aPct"></span><span id="aTxt"></span></div>
+      </div>
+      <div class="tablewrap"><table id="taxTab"><tbody id="taxBody"></tbody></table></div>
+      <p class="hintline">Gewinne nach FIFO wie bei der Bank, Teilfreistellung für Fonds (Aktien-ETF 30 %, Mischfonds 15 %), Aktienverluste nur gegen Aktiengewinne, Verlustvorträge ins Folgejahr, 25 % Abgeltungsteuer plus Soli, ohne Kirchensteuer und ohne Vorabpauschale. Dividenden so, wie du sie eingetragen hast. Eine Schätzung, keine Steuerberatung.</p>
+      <h3 class="sechead">Buchungen im Jahr</h3>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Datum</th><th>Wertpapier</th><th>Art</th><th class="r">Stück</th><th class="r">Betrag</th></tr></thead>
+        <tbody id="yBody"></tbody>
+      </table></div>
+      <div class="row">
+        <button class="btn primary" id="xPos" type="button">Positionen als CSV</button>
+        <button class="btn" id="xTx" type="button">Alle Buchungen als CSV</button>
+      </div>
+      <p class="msg" id="xMsg" aria-live="polite"></p>
+    </details>
+  </section>
+
+  <!-- Einstellungen -->
+  <section class="view" data-view="einstellungen">
+    <h1 class="vtitle">Einstellungen</h1>
+    <details class="card sect" data-sec="setapi" id="setapi" open><summary><span>Kurs-Server</span><span class="smeta" id="apiMeta"></span></summary>
+      <div class="form">
+        <div class="field span2">
+          <label for="sApi">Adresse des Kurs-Proxys</label>
+          <input type="text" id="sApi" placeholder="api/" autocomplete="off">
+          <span class="hint">Standard „api/“: Der Ordner „api“ liegt neben dieser Seite (PHP) oder der Python-Proxy läuft unter derselben Adresse. Ohne mod_rewrite wird automatisch „api/index.php“ verwendet. Sonst die volle Adresse eintragen.</span>
+        </div>
+        <div class="field">
+          <label for="sRefresh">Kurse automatisch holen</label>
+          <select id="sRefresh"><option value="0">nur per Knopf</option><option value="5">alle 5 Minuten</option><option value="15">alle 15 Minuten</option><option value="60">stündlich</option></select>
+        </div>
+        <div class="field">
+          <label for="sBench">Vergleichs-ETF</label>
+          <select id="sBench"><option value="OV:FUND:IE00B4L5Y983">iShares Core MSCI World</option><option value="OV:FUND:DE0005933931">iShares Core DAX</option><option value="OV:FUND:IE00BK5BQT80">Vanguard FTSE All-World</option></select>
+        </div>
+        <div class="field">
+          <label for="sAllow">Sparer-Pauschbetrag</label>
+          <select id="sAllow"><option value="1000">1.000 € (Einzelperson)</option><option value="2000">2.000 € (Ehepaar)</option></select>
+        </div>
+      </div>
+      <div class="row"><button class="btn" id="apiTest" type="button">Verbindung prüfen</button></div>
+      <p class="msg" id="apiMsg" aria-live="polite"></p>
+      <p class="hintline">Mit dem PHP-Proxy kommen die Kurse von onvista (Aktien, ETFs) und der EZB (Wechselkurse), mit dem Python-Proxy von Yahoo Finance. Meist verzögert, ohne Gewähr.</p>
+    </details>
+
+    <details class="card sect" data-sec="setdep" id="setdep" open><summary><span>Depots</span><span class="smeta" id="depMeta"></span></summary>
+      <ul class="lst" id="depList"></ul>
+      <div class="row2"><input type="text" id="depName" maxlength="30" placeholder="z. B. Gemeinsames Depot" aria-label="Name des Depots"><button class="btn" id="depAdd" type="button">Depot hinzufügen</button></div>
+      <p class="msg" id="depMsg" aria-live="polite"></p>
+    </details>
+
+    <details class="card sect" data-sec="setmail" id="setmail" open><summary><span>E-Mail-Alarme</span><span class="smeta" id="mailMeta"></span></summary>
+      <p class="note">Damit Alarme auch bei geschlossener Seite kommen, prüft ein Cronjob auf deinem Webspace die Kurse und schickt eine Mail. Dafür in <b>api/config.php</b> ein Passwort eintragen und hier dasselbe Passwort angeben.</p>
+      <div class="form">
+        <div class="field"><label for="mKey">Alarm-Passwort (aus config.php)</label><input type="password" id="mKey" autocomplete="off"></div>
+        <div class="field"><label for="mMail">E-Mail-Adresse</label><input type="email" id="mMail" autocomplete="email" placeholder="du@beispiel.de"></div>
+      </div>
+      <div class="row"><button class="btn primary" id="mSave" type="button">Speichern und übertragen</button><button class="btn" id="mTest" type="button">Test-Mail senden</button><button class="btn" id="mStatus" type="button">Status abfragen</button></div>
+      <p class="msg" id="mMsg" aria-live="polite"></p>
+      <p class="hintline">Auf deinen Webspace gehen nur Wertpapier, Bedingung und E-Mail-Adresse, keine Stückzahlen oder Kaufkurse.</p>
+    </details>
+
+    <details class="card sect" data-sec="setlook" open><summary><span>Profil &amp; Darstellung</span></summary>
+      <div class="form">
+        <div class="field"><label for="setPName">Profilname</label><input type="text" id="setPName" maxlength="24" autocomplete="off"></div>
+        <div class="field">
+          <label for="setPinOld">PIN ändern</label>
+          <input type="password" id="setPinOld" autocomplete="current-password" placeholder="bisherige PIN">
+          <input type="password" id="setPinNew" autocomplete="new-password" placeholder="neue PIN, mind. 4 Zeichen" aria-label="Neue PIN">
+          <div class="row"><button class="btn" id="savePin" type="button">PIN ändern</button></div>
+        </div>
+        <div class="field">
+          <label for="setAutoLock">Automatisch sperren</label>
+          <select id="setAutoLock"><option value="0">nie</option><option value="5">nach 5 Minuten ohne Eingabe</option><option value="15">nach 15 Minuten</option><option value="60">nach 60 Minuten</option></select>
+        </div>
+      </div>
+      <p class="msg" id="profMsg" aria-live="polite"></p>
+      <hr class="sep">
+      <div class="form">
+        <div class="field span2">
+          <span class="flabel" id="schemeLbl">Farbschema</span>
+          <div class="schemes" id="schemes" role="radiogroup" aria-labelledby="schemeLbl">
+            <label><input type="radio" name="scheme" value="smooth"><span><i class="sws" style="--a:#985A1C;--b:#161616"></i>Smooth</span></label>
+            <label><input type="radio" name="scheme" value="nordsee"><span><i class="sws" style="--a:#1D5F8A;--b:#9CC3DE"></i>Nordsee</span></label>
+            <label><input type="radio" name="scheme" value="salbei"><span><i class="sws" style="--a:#3F6B3A;--b:#B9D2B0"></i>Salbei</span></label>
+            <label><input type="radio" name="scheme" value="pflaume"><span><i class="sws" style="--a:#7A3E6E;--b:#E2BDD9"></i>Pflaume</span></label>
+          </div>
+        </div>
+        <div class="field"><span class="flabel">Ansicht</span><label class="check"><input type="checkbox" id="setCompact"> Kompakte Ansicht</label></div>
+      </div>
+      <p class="msg" id="lookMsg" aria-live="polite"></p>
+    </details>
+
+    <details class="card sect" data-sec="setbackup" open><summary><span>Sicherung</span><span class="smeta" id="bkMeta"></span></summary>
+      <div class="row"><button class="btn primary" id="bkDownload" type="button">Sicherung herunterladen</button><button class="btn" id="bkCopy" type="button">In Textfeld</button></div>
+      <div class="field"><label for="bkTxt">Sicherung (Text)</label><textarea id="bkTxt" spellcheck="false" placeholder="Hier erscheint die Sicherung. Zum Einspielen Text einfügen oder Datei wählen."></textarea></div>
+      <div class="form">
+        <div class="field"><label for="bkFile">Oder Datei wählen</label><input type="file" id="bkFile" accept=".json,application/json"></div>
+        <div class="field"><label for="bkPin">PIN der Sicherung</label><input type="password" id="bkPin" autocomplete="off" placeholder="leer = deine PIN"></div>
+      </div>
+      <div class="row"><button class="btn" id="bkMerge" type="button">Zusammenführen</button><button class="btn" id="bkReplace" type="button">Profil ersetzen</button><button class="btn danger" id="deleteProfile" type="button">Profil löschen</button></div>
+      <p class="msg" id="bkMsg" aria-live="polite"></p>
+      <div class="privacy">
+        <p><b>Wo liegen die Daten?</b> Dein Depot liegt nur in diesem Browser, verschlüsselt mit deiner PIN. Der Kurs-Server bekommt nur die Kürzel, nie Stückzahlen oder Kaufkurse.</p>
+        <p><b>Wichtig:</b> Eine vergessene PIN lässt sich nicht zurücksetzen. Sichere regelmäßig. <span id="bkLast"></span></p>
+        <p><b>Version:</b> Mein Depot <span class="appverlong"></span></p>
+      </div>
+    </details>
+  </section>
+  <footer class="foot"><img src="%%LOGO_HEAD%%" alt="" width="26" height="26"><span>Ein Werkzeug von</span><b>Smooth <span>Solutions</span></b><span class="ver">· Version <span class="appver"></span></span></footer>
+  </div>
+  </div>
+</div>

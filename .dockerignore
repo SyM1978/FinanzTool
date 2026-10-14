@@ -1,0 +1,7 @@
+.git
+.env
+tests
+deploy
+web/out
+**/__pycache__
+*.md

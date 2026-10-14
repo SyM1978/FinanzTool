@@ -1,0 +1,25 @@
+[Unit]
+Description=Meine Finanzen (FastAPI)
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+User=finanzen
+Group=finanzen
+WorkingDirectory=/opt/finanzen/server
+EnvironmentFile=/etc/finanzen/finanzen.env
+ExecStart=/opt/finanzen/venv/bin/uvicorn finanzen.main:app --host 127.0.0.1 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=3
+# Härtung
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

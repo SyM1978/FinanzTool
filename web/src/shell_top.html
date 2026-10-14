@@ -1,0 +1,78 @@
+<!-- Anmeldung -->
+<div class="boot" id="boot"><img src="%%LOGO_HEAD%%" alt="" width="48" height="48"><span id="bootMsg">Meine Finanzen wird geladen …</span></div>
+<div class="gate" id="gate" hidden>
+  <div class="gatecard">
+    <div style="display:flex;flex-direction:column;gap:14px;text-align:center">
+      <img class="logotile" src="%%LOGO_FULL%%" alt="Smooth Solutions" width="403" height="424">
+      <div><h1>Meine Finanzen</h1><p class="sub" id="gSub">Konten, Finanzplan und Depot an einem Ort.</p></div>
+    </div>
+    <div class="banner" id="gNote" hidden><span id="gNoteTxt"></span></div>
+
+    <form class="gform" id="gLogin" novalidate>
+      <div class="field"><label for="gEmail">E-Mail</label><input type="email" id="gEmail" autocomplete="username" inputmode="email"></div>
+      <div class="field"><label for="gPw">Passwort</label><input type="password" id="gPw" autocomplete="current-password"></div>
+      <p class="msg bad" id="gErr" aria-live="assertive" style="text-align:center"></p>
+      <div class="center"><button class="btn primary" type="submit" id="gGo">Anmelden</button></div>
+    </form>
+
+    <form class="gform" id="gReg" hidden novalidate>
+      <div class="field"><label for="gRName">Dein Name</label><input type="text" id="gRName" maxlength="40" autocomplete="name" placeholder="z. B. Markus"></div>
+      <div class="field"><label for="gREmail">E-Mail</label><input type="email" id="gREmail" autocomplete="username" inputmode="email"></div>
+      <div class="field"><label for="gRPw">Passwort</label><input type="password" id="gRPw" autocomplete="new-password"><span class="hint" id="gRPwHint">Mindestens 10 Zeichen. Ein Satz ist leichter zu merken als Sonderzeichen.</span></div>
+      <div class="field"><label for="gRPw2">Passwort wiederholen</label><input type="password" id="gRPw2" autocomplete="new-password"></div>
+      <div class="field" id="gRInvWrap" hidden><label for="gRInv">Einladungscode</label><input type="text" id="gRInv" autocomplete="off"><span class="hint">Steht in der Server-Einstellung INVITE_CODE.</span></div>
+      <p class="msg bad" id="gRErr" aria-live="assertive"></p>
+      <div class="row">
+        <button class="btn primary" type="submit" id="gRGo">Konto anlegen</button>
+        <button class="btn ghost" type="button" id="gRCancel">Zur Anmeldung</button>
+      </div>
+    </form>
+
+    <div class="center" id="gRegWrap" hidden><button class="btn" id="gRegBtn" type="button">Neues Konto anlegen</button></div>
+    <p class="ver" style="text-align:center">Version <span class="appver"></span></p>
+  </div>
+</div>
+
+<!-- App -->
+<div class="shell" id="app" hidden>
+  <aside class="side" id="side" aria-label="Hauptmenü">
+    <div class="sidebrand">
+      <img class="mark" src="%%LOGO_HEAD%%" alt="Smooth Solutions" width="48" height="48">
+      <div><b>Meine Finanzen</b><span id="dateLine"></span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <span class="navh">Finanzen</span>
+%%NAV_FIN%%
+      <span class="navh">Depot</span>
+%%NAV_DEP%%
+      <span class="navh">Allgemein</span>
+      <a href="#einstellungen" data-view="einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg><span>Einstellungen</span></a>
+    </nav>
+    <div class="sidefoot">
+      <span class="syncst" id="syncState" aria-live="polite"><i></i><span id="syncTxt">gespeichert</span></span>
+      <button class="pill" id="lockBtn" type="button" title="Abmelden"><span class="lock" aria-hidden="true"></span><span><b id="profName"></b> · abmelden</span></button>
+      <span class="ver">Version <span class="appver"></span></span>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <div class="mainwrap">
+    <header class="mtop">
+      <button class="menubtn" id="menuBtn" type="button" aria-label="Menü öffnen" aria-controls="side" aria-expanded="false"><i></i><i></i><i></i></button>
+      <img class="mark" src="%%LOGO_HEAD%%" alt="" width="32" height="32">
+      <b id="viewTitle">Übersicht</b>
+      <span class="syncdot" id="syncDot" aria-hidden="true"></span>
+    </header>
+  <div class="wrap">
+  <div class="banner" id="previewBar" hidden><span><b>Vorschau ohne Server.</b> Anmeldung, Speichern und echte Kurse gibt es erst auf deinem VPS. Probier die Beispieldaten aus.</span></div>
+  <div class="banner" id="demoBar" hidden>
+    <span><b>Beispieldaten.</b> So sehen die Finanzen mit ein paar Konten aus. Leere sie, bevor du deine eigenen Daten einträgst.</span>
+    <button class="btn" id="clearDemo" type="button">Beispieldaten leeren</button>
+  </div>
+  <div class="banner" id="dpDemoBar" hidden>
+    <span><b>Beispieldepot mit Spielkursen.</b> Leere es, bevor du deine eigenen Käufe einträgst.</span>
+    <button class="btn" id="dpClearDemo" type="button">Beispieldepot leeren</button>
+  </div>
+  <div class="banner" id="syncBar" hidden><span id="syncBarTxt"></span><button class="btn" id="syncRetry" type="button">Erneut versuchen</button></div>
+  <div class="alerts" id="alerts"></div>
+  <div class="alerts" id="dpAlerts"></div>

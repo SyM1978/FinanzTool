@@ -1,0 +1,9 @@
+[Unit]
+Description=Kursalarme alle 15 Minuten (werktags 8–22 Uhr)
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 08..22:00/15
+Persistent=false
+
+[Install]
+WantedBy=timers.target

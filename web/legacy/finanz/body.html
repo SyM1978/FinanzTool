@@ -1,0 +1,474 @@
+<!-- Profilwahl -->
+<div class="gate" id="gate" hidden>
+  <div class="gatecard">
+    <div style="display:flex;flex-direction:column;gap:14px;text-align:center">
+      <img class="logotile" src="%%LOGO_FULL%%" alt="Smooth Solutions" width="403" height="424">
+      <div><h1>Mein Finanzkonto</h1><p class="sub">Deine Daten bleiben verschlüsselt in diesem Browser.</p></div>
+    </div>
+    <div class="banner" id="gCrypto" hidden><span><b>Verschlüsselung nicht verfügbar.</b> Öffne die Seite über https:// oder als lokale Datei.</span></div>
+    <div id="gChoose"><div class="plist" id="gList"></div></div>
+
+    <form class="gform" id="gPin" hidden novalidate>
+      <p class="pinhead">PIN für <b id="gPinName"></b></p>
+      <div class="gpass"><input type="password" id="gPinIn" autocomplete="current-password" inputmode="numeric" aria-label="PIN oder Passwort"><button class="btn primary" type="submit" id="gPinGo">Öffnen</button></div>
+      <p class="msg bad" id="gErr" aria-live="assertive" style="text-align:center"></p>
+      <div class="center"><button class="btn ghost" id="gBack" type="button">Anderes Profil</button></div>
+    </form>
+
+    <form class="gform" id="gNew" hidden novalidate>
+      <div class="field">
+        <label for="gName">Profilname</label>
+        <input type="text" id="gName" maxlength="24" autocomplete="off" placeholder="z. B. Markus">
+      </div>
+      <div class="field">
+        <label for="gNewPin">PIN oder Passwort</label>
+        <input type="password" id="gNewPin" autocomplete="new-password">
+        <span class="hint">Mindestens 4 Zeichen. Länger ist sicherer, z. B. 6 Ziffern oder ein Satz. Ohne PIN kommt niemand an die Daten, auch du nicht.</span>
+      </div>
+      <div class="field">
+        <label for="gNewPin2">Wiederholen</label>
+        <input type="password" id="gNewPin2" autocomplete="new-password">
+      </div>
+      <p class="msg bad" id="gNewErr" aria-live="assertive"></p>
+      <div class="row">
+        <button class="btn primary" type="submit">Profil anlegen</button>
+        <button class="btn ghost" type="button" id="gNewCancel">Abbrechen</button>
+      </div>
+    </form>
+
+    <div class="center" id="gNewWrap"><button class="btn" id="gNewBtn" type="button">+ Neues Profil</button></div>
+    <p class="ver" style="text-align:center">Version <span class="appver"></span></p>
+  </div>
+</div>
+
+<!-- App -->
+<div class="shell" id="app" hidden>
+  <aside class="side" id="side" aria-label="Hauptmenü">
+    <div class="sidebrand">
+      <img class="mark" src="%%LOGO_HEAD%%" alt="Smooth Solutions" width="48" height="48">
+      <div><b>Mein Finanzkonto</b><span id="dateLine"></span></div>
+    </div>
+    <nav class="nav" id="nav">
+      <a href="#uebersicht" data-view="uebersicht"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg><span>Übersicht</span><span class="nm" id="nmNet"></span></a>
+      <a href="#konten" data-view="konten"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Konten &amp; Buchungen</span><span class="nm" id="nmAcc"></span></a>
+      <a href="#auftraege" data-view="auftraege"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></svg><span>Daueraufträge</span><span class="nm" id="nmOrd"></span></a>
+      <a href="#kredite" data-view="kredite"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M5 20V10l7-5 7 5v10"/><path d="M10 20v-5h4v5"/></svg><span>Kredite</span><span class="nm" id="nmLoan"></span></a>
+      <a href="#plan" data-view="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9h17M3.5 14h17M9 9v11"/></svg><span>Finanzplan</span><span class="nm" id="nmPlan"></span></a>
+      <a href="#auswertung" data-view="auswertung"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="6" y="11" width="3" height="6"/><rect x="11" y="7" width="3" height="10"/><rect x="16" y="13" width="3" height="4"/></svg><span>Auswertung &amp; Export</span></a>
+      <a href="#einstellungen" data-view="einstellungen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg><span>Einstellungen</span></a>
+    </nav>
+    <div class="sidefoot">
+      <button class="pill" id="lockBtn" type="button" title="Profil sperren"><span class="lock" aria-hidden="true"></span><span><b id="profName"></b> · sperren</span></button>
+      <span class="ver">Version <span class="appver"></span></span>
+    </div>
+  </aside>
+  <div class="backdrop" id="backdrop" hidden></div>
+
+  <div class="mainwrap">
+    <header class="mtop">
+      <button class="menubtn" id="menuBtn" type="button" aria-label="Menü öffnen" aria-controls="side" aria-expanded="false"><i></i><i></i><i></i></button>
+      <img class="mark" src="%%LOGO_HEAD%%" alt="" width="32" height="32">
+      <b id="viewTitle">Übersicht</b>
+    </header>
+  <div class="wrap">
+  <div class="banner" id="demoBar" hidden>
+    <span><b>Beispieldaten.</b> So sieht das Finanzkonto mit ein paar Konten aus. Leere sie, bevor du deine eigenen Daten einträgst.</span>
+    <button class="btn" id="clearDemo" type="button">Beispieldaten leeren</button>
+  </div>
+  <div class="banner" id="storeBar" hidden><span><b>Speichern nicht möglich.</b> Dieser Browser blockiert lokalen Speicher.</span></div>
+  <div class="alerts" id="alerts"></div>
+
+  <!-- Übersicht -->
+  <section class="view" data-view="uebersicht">
+    <h1 class="vtitle">Übersicht</h1>
+    <details class="card sect" data-sec="welcome" id="welcome" hidden open><summary><span>Los geht’s</span></summary>
+      <div class="welcome">
+        <div class="fc"><span class="lbl">1 · Finanzplan</span><p>Importdatei aus deiner Excel einlesen. Dabei werden passende Konten und Daueraufträge vorgeschlagen.</p><button class="btn primary" type="button" data-go="einstellungen#import">Excel-Import öffnen</button></div>
+        <div class="fc"><span class="lbl">2 · Konten</span><p>Konten mit Startwert, Gebühren, Sparziel oder Kreditdaten selbst anlegen.</p><button class="btn" type="button" data-go="einstellungen#konten">Konto anlegen</button></div>
+        <div class="fc"><span class="lbl">Erst mal schauen</span><p>Beispieldaten laden und alles ausprobieren. Sie lassen sich jederzeit leeren.</p><button class="btn" type="button" id="loadDemo">Beispieldaten laden</button></div>
+      </div>
+    </details>
+    <div class="grid">
+      <details class="card sect" data-sec="net" open><summary><span>Vermögen</span><span class="smeta" id="sumNet"></span></summary>
+        <div><span class="lbl">Guthaben minus Schulden, heute</span><div class="big eur" id="netNow">–</div></div>
+        <div class="forecast">
+          <div class="fc"><span class="lbl">Monatsende</span><b class="eur" id="netMonth">–</b><small id="netMonthSub"></small></div>
+          <div class="fc"><span class="lbl">Jahresende</span><b class="eur" id="netYear">–</b><small id="netYearSub"></small></div>
+        </div>
+        <p class="note" id="netNote"></p>
+      </details>
+      <details class="card sect" data-sec="month" open><summary><span>Finanzplan diesen Monat</span><span class="smeta" id="sumMonth"></span></summary>
+        <div class="kpis">
+          <div class="fc"><span class="lbl">Einnahmen</span><b class="eur" id="pmIn">–</b></div>
+          <div class="fc"><span class="lbl">Ausgaben</span><b class="eur" id="pmOut">–</b></div>
+          <div class="fc"><span class="lbl">Überschuss</span><b class="eur" id="pmRes">–</b><small id="pmResSub"></small></div>
+        </div>
+        <p class="note" id="pmNote"></p>
+      </details>
+      <details class="card wide sect" data-sec="tiles" open><summary><span>Konten</span><span class="smeta" id="sumTiles"></span></summary>
+        <div class="acctiles" id="tiles"></div>
+      </details>
+      <details class="card wide sect" data-sec="soon" open><summary><span>Demnächst</span><span class="smeta">nächste 14 Tage</span></summary>
+        <ul class="lst" id="soonList"></ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- Konten -->
+  <section class="view" data-view="konten">
+    <h1 class="vtitle">Konten &amp; Buchungen</h1>
+    <div class="accpick" id="accPick" role="group" aria-label="Konto wählen"></div>
+    <p class="empty" id="accNone" hidden>Noch kein Konto angelegt. <button class="linkbtn" type="button" data-go="einstellungen#konten">Konto anlegen</button></p>
+    <div class="grid" id="accGrid">
+      <details class="card sect" data-sec="accstate" open><summary><span id="accTitle">Konto</span><span class="smeta" id="accKind"></span></summary>
+        <div><span class="lbl" id="accNowLbl">Stand heute</span><div class="big eur" id="accNow">–</div></div>
+        <div class="goalbar" id="accGoalBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" hidden><div class="fill" id="accGoalFill"></div></div>
+        <div class="goalmeta" id="accGoalMeta" hidden><span id="accGoalPct"></span><span id="accGoalTxt"></span></div>
+        <div class="forecast">
+          <div class="fc"><span class="lbl">Monatsende</span><b class="eur" id="accMonth">–</b><small id="accMonthSub"></small></div>
+          <div class="fc"><span class="lbl" id="accFc2Lbl">Jahresende</span><b class="eur" id="accFc2">–</b><small id="accFc2Sub"></small></div>
+        </div>
+        <div class="chips" id="accChips"></div>
+      </details>
+      <details class="card sect" data-sec="accchart" open><summary><span>Verlauf</span><span class="smeta" id="accChartMeta"></span></summary>
+        <div class="cardhead">
+          <div class="monthnav">
+            <button class="navbtn" id="accPrev" type="button" aria-label="Vorheriger Monat">‹</button>
+            <span id="accMonthLbl"></span>
+            <button class="navbtn" id="accNext" type="button" aria-label="Nächster Monat">›</button>
+          </div>
+          <div class="legend"><span><i class="sw"></i>gebucht</span><span><i class="sw dash"></i>Prognose</span></div>
+        </div>
+        <div class="chartbox" id="accChart"></div>
+      </details>
+      <details class="card wide sect" data-sec="acctx" open><summary><span>Buchungen</span><span class="smeta" id="accTxMeta"></span></summary>
+        <div class="tablewrap"><table class="txlist">
+          <thead><tr><th>Datum</th><th>Buchung</th><th>Art</th><th class="r">Betrag</th><th class="r">Stand</th></tr></thead>
+          <tbody id="txBody"></tbody>
+        </table></div>
+        <div class="editbox" id="occBox" hidden>
+          <h3 id="occTitle">Ausführung anpassen</h3>
+          <div class="txform">
+            <div class="field"><label for="occDate">Datum</label><input type="date" id="occDate"></div>
+            <div class="field"><label for="occAmt">Betrag (€)</label><input type="text" id="occAmt" class="amtin" inputmode="decimal"></div>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="occSave" type="button">Nur diese Ausführung ändern</button>
+            <button class="btn" id="occSkip" type="button">Diesmal aussetzen</button>
+            <button class="btn ghost" id="occReset" type="button">Wie Dauerauftrag</button>
+            <button class="btn ghost" id="occClose" type="button">Schließen</button>
+          </div>
+          <p class="hintline" id="occHint"></p>
+        </div>
+      </details>
+      <details class="card sect" data-sec="newtx" open><summary><span id="txFormTitle">Neue Buchung</span></summary>
+        <form id="txForm" novalidate>
+          <div class="seg" id="txKind" role="radiogroup" aria-label="Art der Buchung" style="margin-bottom:12px">
+            <label><input type="radio" name="txk" value="out" checked><span>Ausgabe</span></label>
+            <label><input type="radio" name="txk" value="in"><span>Einnahme</span></label>
+            <label><input type="radio" name="txk" value="tr"><span>Umbuchung</span></label>
+          </div>
+          <div class="txform">
+            <div class="field"><label for="txDate">Datum</label><input type="date" id="txDate"></div>
+            <div class="field"><label for="txAmt">Betrag (€)</label><input type="text" id="txAmt" class="amtin" inputmode="decimal" placeholder="0,00"></div>
+            <div class="field span2"><label for="txText">Text</label><input type="text" id="txText" maxlength="60" placeholder="z. B. Wocheneinkauf"></div>
+            <div class="field"><label for="txCat">Kategorie</label><input type="text" id="txCat" list="catList" maxlength="40" placeholder="aus dem Finanzplan"></div>
+            <div class="field" id="txToWrap" hidden><label for="txTo">Auf Konto</label><select id="txTo"></select></div>
+          </div>
+          <p class="msg" id="txMsg" aria-live="polite"></p>
+          <div class="row">
+            <button class="btn primary" type="submit" id="txSave">Buchen</button>
+            <button class="btn danger" type="button" id="txDel" hidden>Löschen</button>
+            <button class="btn ghost" type="button" id="txCancel" hidden>Abbrechen</button>
+          </div>
+        </form>
+      </details>
+      <details class="card sect" data-sec="recon" data-default="closed"><summary><span>Bankabgleich</span><span class="smeta" id="reconMeta"></span></summary>
+        <p class="note">Trag den Stand aus dem Online-Banking ein. Die Differenz zeigt, ob hier etwas fehlt.</p>
+        <div class="txform">
+          <div class="field"><label for="rcDate">Stand vom</label><input type="date" id="rcDate"></div>
+          <div class="field"><label for="rcAmt">Kontostand Bank (€)</label><input type="text" id="rcAmt" class="amtin" inputmode="decimal"></div>
+        </div>
+        <div class="row"><button class="btn" id="rcCheck" type="button">Vergleichen</button><button class="btn" id="rcFix" type="button" hidden>Differenz als Korrektur buchen</button></div>
+        <p class="msg" id="rcMsg" aria-live="polite"></p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Daueraufträge -->
+  <section class="view" data-view="auftraege">
+    <h1 class="vtitle">Daueraufträge</h1>
+    <div class="grid">
+      <details class="card wide sect" data-sec="orders" open><summary><span>Alle Daueraufträge</span><span class="smeta" id="ordMeta"></span></summary>
+        <div class="row" id="ordFilter"></div>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Bezeichnung</th><th>Von → Nach</th><th>Rhythmus</th><th>Nächste</th><th class="r">Betrag</th><th class="r">pro Monat</th></tr></thead>
+          <tbody id="ordBody"></tbody>
+          <tfoot id="ordFoot"></tfoot>
+        </table></div>
+      </details>
+      <details class="card wide sect" data-sec="ordform" open><summary><span id="ordFormTitle">Neuer Dauerauftrag</span></summary>
+        <form id="ordForm" novalidate>
+          <div class="txform">
+            <div class="field span2"><label for="oName">Bezeichnung</label><input type="text" id="oName" maxlength="50"></div>
+            <div class="field"><label for="oAmt">Betrag (€)</label><input type="text" id="oAmt" class="amtin" inputmode="decimal"></div>
+            <div class="field"><label for="oFrom">Von</label><select id="oFrom"></select></div>
+            <div class="field"><label for="oTo">Nach</label><select id="oTo"></select></div>
+            <div class="field"><label for="oInt">Rhythmus</label><select id="oInt"><option value="m">monatlich</option><option value="q">vierteljährlich</option><option value="h">halbjährlich</option><option value="j">jährlich</option></select></div>
+            <div class="field"><label for="oDay">Ausführungstag</label><select id="oDay"></select></div>
+            <div class="field"><label for="oStart">Erste Ausführung ab</label><input type="date" id="oStart"></div>
+            <div class="field"><label for="oEnd">Letzte bis (optional)</label><input type="date" id="oEnd"></div>
+            <div class="field"><label for="oShift">Wochenende/Feiertag</label><select id="oShift"><option value="next">nächster Bankarbeitstag</option><option value="prev">Bankarbeitstag davor</option><option value="none">nicht verschieben</option></select></div>
+            <div class="field"><label for="oCat">Kategorie</label><input type="text" id="oCat" list="catList" maxlength="40" placeholder="aus dem Finanzplan"></div>
+          </div>
+          <p class="hintline">Von „Extern“ = Einnahme, z. B. Gehalt. Nach „Extern“ = Ausgabe. Zwischen zwei eigenen Konten = Umbuchung. Bei vierteljährlich, halbjährlich und jährlich bestimmt der Monat der ersten Ausführung den Rhythmus.</p>
+          <p class="msg" id="ordMsg" aria-live="polite"></p>
+          <div class="row">
+            <button class="btn primary" type="submit" id="ordSave">Dauerauftrag anlegen</button>
+            <button class="btn danger" type="button" id="ordDel" hidden>Löschen</button>
+            <button class="btn ghost" type="button" id="ordCancel" hidden>Abbrechen</button>
+          </div>
+        </form>
+      </details>
+    </div>
+  </section>
+
+  <!-- Kredite -->
+  <section class="view" data-view="kredite">
+    <h1 class="vtitle">Kredite</h1>
+    <div class="accpick" id="loanPick" role="group" aria-label="Kredit wählen"></div>
+    <p class="empty" id="loanNone" hidden>Noch kein Kreditkonto. Leg eines unter <button class="linkbtn" type="button" data-go="einstellungen#konten">Einstellungen › Konten</button> an, Art „Kredit“.</p>
+    <div class="grid" id="loanGrid">
+      <details class="card sect" data-sec="loanstate" open><summary><span id="loanTitle">Kredit</span><span class="smeta" id="loanMeta"></span></summary>
+        <div><span class="lbl">Restschuld heute</span><div class="big eur" id="lnRest">–</div></div>
+        <div class="goalbar" role="progressbar" aria-label="Getilgter Anteil" id="lnBar" aria-valuemin="0" aria-valuemax="100"><div class="fill" id="lnFill"></div></div>
+        <div class="goalmeta"><span id="lnPct"></span><span id="lnOrig"></span></div>
+        <div class="forecast">
+          <div class="fc"><span class="lbl">Getilgt am</span><b id="lnEnd">–</b><small id="lnEndSub"></small></div>
+          <div class="fc"><span class="lbl">Zinsen bis Ende</span><b class="eur" id="lnInt">–</b><small id="lnIntSub"></small></div>
+          <div class="fc"><span class="lbl">Rate</span><b class="eur" id="lnRate">–</b><small id="lnRateSub"></small></div>
+          <div class="fc"><span class="lbl">Ende des Jahres</span><b class="eur" id="lnYear">–</b><small id="lnYearSub"></small></div>
+        </div>
+        <div class="chips" id="lnChips"></div>
+      </details>
+      <details class="card sect" data-sec="loanchart" open><summary><span>Restschuld im Zeitverlauf</span></summary>
+        <div class="chartbox" id="lnChart"></div>
+      </details>
+      <details class="card sect" data-sec="loansim" open><summary><span>Sondertilgung durchrechnen</span></summary>
+        <div class="txform">
+          <div class="field"><label for="stAmt">Betrag (€)</label><input type="text" id="stAmt" class="amtin" inputmode="decimal" placeholder="z. B. 2.000"></div>
+          <div class="field"><label for="stDate">Am</label><input type="date" id="stDate"></div>
+          <div class="field"><label for="stYearly">Wiederholen</label><select id="stYearly"><option value="0">einmalig</option><option value="1">jedes Jahr</option></select></div>
+          <div class="field"><label for="stRate">oder neue Rate (€)</label><input type="text" id="stRate" class="amtin" inputmode="decimal" placeholder="unverändert"></div>
+        </div>
+        <div class="kpis" id="stOut"></div>
+        <div class="row"><button class="btn" id="stApply" type="button" hidden>Sondertilgung vom Girokonto einplanen</button></div>
+        <p class="msg" id="stMsg" aria-live="polite"></p>
+      </details>
+      <details class="card wide sect" data-sec="loanplan" open><summary><span>Tilgungsplan</span><span class="smeta" id="lpMeta"></span></summary>
+        <div class="seg" id="lpMode" role="radiogroup" aria-label="Darstellung">
+          <label><input type="radio" name="lpm" value="y" checked><span>Jahre</span></label>
+          <label><input type="radio" name="lpm" value="m"><span>Monate</span></label>
+        </div>
+        <div class="tablewrap"><table>
+          <thead><tr><th id="lpH">Jahr</th><th class="r">Zahlungen</th><th class="r">davon Zinsen</th><th class="r">davon Tilgung</th><th class="r">Restschuld</th></tr></thead>
+          <tbody id="lpBody"></tbody>
+        </table></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- Finanzplan -->
+  <section class="view" data-view="plan">
+    <h1 class="vtitle">Finanzplan</h1>
+    <details class="card sect" data-sec="plantab" open><summary><span id="planTitle">Jahresplanung</span><span class="smeta" id="planMeta"></span></summary>
+      <div class="plantools">
+        <div class="monthnav">
+          <button class="navbtn" id="plPrev" type="button" aria-label="Vorheriges Jahr">‹</button>
+          <span id="plYear"></span>
+          <button class="navbtn" id="plNext" type="button" aria-label="Nächstes Jahr">›</button>
+        </div>
+        <div class="seg" id="plMode" role="radiogroup" aria-label="Anzeige">
+          <label><input type="radio" name="plm" value="plan" checked><span>Plan</span></label>
+          <label><input type="radio" name="plm" value="ist"><span>Plan + Ist</span></label>
+        </div>
+        <label class="check"><input type="checkbox" id="plFill"> Eingabe für die Folgemonate übernehmen</label>
+      </div>
+      <p class="empty" id="plEmpty" hidden>Für dieses Jahr gibt es noch keine Planung. <button class="btn" id="plCopy" type="button">Aus Vorjahr übernehmen</button> <button class="btn ghost" id="plBlank" type="button">Leer anlegen</button></p>
+      <div class="planwrap" id="planWrap"><table class="plan" id="planTable"></table></div>
+      <div class="row" id="plAddRow">
+        <select id="plAddKind" aria-label="Bereich"><option value="fix">Fixe Ausgaben</option><option value="variabel">Variable Ausgaben</option><option value="einnahme">Einnahmen</option></select>
+        <input type="text" id="plAddName" maxlength="40" placeholder="Neue Gruppe, z. B. Haustiere" style="max-width:260px" aria-label="Name der Gruppe">
+        <button class="btn" id="plAddGroup" type="button">Gruppe hinzufügen</button>
+        <button class="btn ghost" id="plDelYear" type="button">Jahr löschen</button>
+      </div>
+      <p class="hintline">Beträge direkt in die Zellen tippen. Prozentwerte beziehen sich wie in deiner Excel auf die Einnahmen des Monats. „Ist“ zählt Buchungen und Daueraufträge mit gleichnamiger Kategorie.</p>
+      <p class="msg" id="planMsg" aria-live="polite"></p>
+    </details>
+  </section>
+
+  <!-- Auswertung -->
+  <section class="view" data-view="auswertung">
+    <h1 class="vtitle">Auswertung &amp; Export</h1>
+    <details class="card sect" data-sec="report" id="report" open><summary><span>Auswertung</span><span class="smeta" id="repMeta"></span></summary>
+      <div class="printhead"><img src="%%LOGO_HEAD%%" alt="" width="44" height="44"><div><b id="phTitle">Auswertung</b><span id="phSub"></span></div></div>
+      <div class="plantools noprint">
+        <div class="seg" id="repMode" role="radiogroup" aria-label="Zeitraum">
+          <label><input type="radio" name="repm" value="month" checked><span>Monat</span></label>
+          <label><input type="radio" name="repm" value="year"><span>Jahr</span></label>
+        </div>
+        <div class="monthnav">
+          <button class="navbtn" id="repPrev" type="button" aria-label="Zurück">‹</button>
+          <span id="repLabel"></span>
+          <button class="navbtn" id="repNext" type="button" aria-label="Weiter">›</button>
+        </div>
+      </div>
+      <div class="vacgrid" id="repKpis"></div>
+      <h3 class="sechead">Plan und Ist nach Kategorien</h3>
+      <div class="tablewrap"><table id="repTable"><thead><tr><th>Kategorie</th><th>Bereich</th><th class="r">Plan</th><th class="r">Ist</th><th class="r">Abweichung</th></tr></thead><tbody id="repBody"></tbody><tfoot id="repFoot"></tfoot></table></div>
+      <h3 class="sechead">Kontenbewegungen</h3>
+      <div class="tablewrap"><table id="repAcc"><thead><tr><th>Konto</th><th class="r">Anfang</th><th class="r">Eingänge</th><th class="r">Ausgänge</th><th class="r">Ende</th></tr></thead><tbody id="repAccBody"></tbody></table></div>
+      <div class="row noprint">
+        <button class="btn primary" id="repCsv" type="button">Als CSV herunterladen</button>
+        <button class="btn" id="repTxCsv" type="button">Alle Buchungen als CSV</button>
+        <button class="btn" id="repPrint" type="button">Drucken / PDF</button>
+      </div>
+      <p class="msg noprint" id="repMsg" aria-live="polite"></p>
+    </details>
+  </section>
+
+  <!-- Einstellungen -->
+  <section class="view" data-view="einstellungen">
+    <h1 class="vtitle">Einstellungen</h1>
+    <details class="card sect" data-sec="setacc" id="konten" open><summary><span>Konten</span><span class="smeta" id="setAccMeta"></span></summary>
+      <ul class="lst" id="accList"></ul>
+      <form class="editbox" id="accForm" novalidate>
+        <h3 id="accFormTitle">Neues Konto</h3>
+        <div class="txform">
+          <div class="field span2"><label for="aName">Name</label><input type="text" id="aName" maxlength="30" placeholder="z. B. Urlaubskonto"></div>
+          <div class="field"><label for="aKind">Art</label><select id="aKind"><option value="giro">Girokonto</option><option value="haushalt">Haushaltskonto</option><option value="spar">Sparkonto</option><option value="kredit">Kredit</option><option value="karte">Kreditkarte</option><option value="sonst">Sonstiges</option></select></div>
+          <div class="field"><label for="aStartDate" id="aStartDateLbl">Stand zu Beginn des</label><input type="date" id="aStartDate"></div>
+          <div class="field"><label for="aStart" id="aStartLbl">Startwert (€)</label><input type="text" id="aStart" class="amtin" inputmode="decimal" placeholder="0,00"></div>
+          <div class="field"><span class="flabel">Farbe</span><div class="colors" id="aColors"></div></div>
+        </div>
+        <div class="txform" id="aLoan" hidden>
+          <div class="field"><label for="aRate">Sollzins (% p. a.)</label><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 3,85"></div>
+          <div class="field"><label for="aPay">Monatsrate (€)</label><input type="text" id="aPay" class="amtin" inputmode="decimal"></div>
+          <div class="field"><label for="aPayDay">Fällig am</label><select id="aPayDay"></select></div>
+          <div class="field"><label for="aPayFrom">Rate kommt von</label><select id="aPayFrom"></select></div>
+          <div class="field"><label for="aOrig">Ursprünglicher Betrag (optional)</label><input type="text" id="aOrig" class="amtin" inputmode="decimal"></div>
+          <p class="hintline span2">Restschuld als Startwert eintragen (positiv). Die Rate wird als Dauerauftrag angelegt, Zinsen und Tilgung rechnet das Konto selbst. Daraus ergibt sich, wann der Kredit getilgt ist.</p>
+        </div>
+        <div class="txform" id="aExtra">
+          <div class="field"><label for="aFee">Kontoführungsgebühr (€)</label><input type="text" id="aFee" class="amtin" inputmode="decimal" placeholder="keine"></div>
+          <div class="field"><label for="aFeeInt">Gebühr</label><select id="aFeeInt"><option value="m">monatlich</option><option value="q">vierteljährlich</option><option value="j">jährlich</option></select></div>
+          <div class="field"><label for="aFeeDay">Abbuchung am</label><select id="aFeeDay"></select></div>
+          <div class="field"><label for="aInt">Guthabenzins (% p. a.)</label><input type="text" id="aInt" class="amtin" inputmode="decimal" placeholder="keiner"></div>
+          <div class="field"><label for="aGoal">Sparziel (€)</label><input type="text" id="aGoal" class="amtin" inputmode="decimal" placeholder="keins"></div>
+          <div class="field"><label for="aGoalDate">Ziel bis (optional)</label><input type="date" id="aGoalDate"></div>
+          <div class="field"><label for="aMin">Warnen unter (€)</label><input type="text" id="aMin" class="amtin" inputmode="decimal" placeholder="0,00"></div>
+        </div>
+        <p class="msg" id="accMsg" aria-live="polite"></p>
+        <div class="row">
+          <button class="btn primary" type="submit" id="accSave">Konto anlegen</button>
+          <button class="btn danger" type="button" id="accDel" hidden>Konto löschen</button>
+          <button class="btn ghost" type="button" id="accCancel" hidden>Abbrechen</button>
+        </div>
+      </form>
+    </details>
+
+    <details class="card sect" data-sec="setimport" id="import" open><summary><span>Excel-Import</span></summary>
+      <p class="note">Wähle die Importdatei <b>finanzplan_2026_2027.json</b>. Sie übernimmt die Jahresplanung und schlägt Konten und Daueraufträge vor, die du vorher an- oder abwählst.</p>
+      <div class="row"><input type="file" id="impFile" accept=".json,application/json" aria-label="Importdatei wählen"></div>
+      <div id="impBox" hidden class="editbox">
+        <h3>Was soll übernommen werden?</h3>
+        <label class="check"><input type="checkbox" id="impPlan" checked> Jahresplanung <span id="impYears"></span> (bestehende Jahre werden ersetzt)</label>
+        <span class="flabel">Konten</span>
+        <div class="sugg" id="impAcc"></div>
+        <span class="flabel">Daueraufträge (vom Girokonto, Tag und Startwerte danach anpassen)</span>
+        <div class="sugg" id="impOrd"></div>
+        <div class="row"><button class="btn primary" id="impGo" type="button">Übernehmen</button><button class="btn ghost" id="impCancel" type="button">Abbrechen</button></div>
+      </div>
+      <p class="msg" id="impMsg" aria-live="polite"></p>
+      <p class="hintline">Die Importdatei enthält deine Zahlen unverschlüsselt. Lösche sie nach dem Import oder bewahre sie sicher auf.</p>
+    </details>
+
+    <details class="card sect" data-sec="setlook" open><summary><span>Profil &amp; Darstellung</span></summary>
+      <div class="form">
+        <div class="field">
+          <label for="setPName">Profilname</label>
+          <input type="text" id="setPName" maxlength="24" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="setPinOld">PIN ändern</label>
+          <input type="password" id="setPinOld" autocomplete="current-password" placeholder="bisherige PIN">
+          <input type="password" id="setPinNew" autocomplete="new-password" placeholder="neue PIN, mind. 4 Zeichen" aria-label="Neue PIN">
+          <div class="row"><button class="btn" id="savePin" type="button">PIN ändern</button></div>
+        </div>
+        <div class="field">
+          <label for="setAutoLock">Automatisch sperren</label>
+          <select id="setAutoLock"><option value="0">nie</option><option value="5">nach 5 Minuten ohne Eingabe</option><option value="15">nach 15 Minuten</option><option value="60">nach 60 Minuten</option></select>
+          <span class="hint">Nach dem Neuladen der Seite ist das Profil immer gesperrt.</span>
+        </div>
+      </div>
+      <p class="msg" id="profMsg" aria-live="polite"></p>
+      <hr class="sep">
+      <div class="form">
+        <div class="field span2">
+          <span class="flabel" id="schemeLbl">Farbschema</span>
+          <div class="schemes" id="schemes" role="radiogroup" aria-labelledby="schemeLbl">
+            <label><input type="radio" name="scheme" value="smooth"><span><i class="sws" style="--a:#985A1C;--b:#161616"></i>Smooth</span></label>
+            <label><input type="radio" name="scheme" value="nordsee"><span><i class="sws" style="--a:#1D5F8A;--b:#9CC3DE"></i>Nordsee</span></label>
+            <label><input type="radio" name="scheme" value="salbei"><span><i class="sws" style="--a:#3F6B3A;--b:#B9D2B0"></i>Salbei</span></label>
+            <label><input type="radio" name="scheme" value="pflaume"><span><i class="sws" style="--a:#7A3E6E;--b:#E2BDD9"></i>Pflaume</span></label>
+          </div>
+          <span class="hint">Hell und dunkel richten sich nach deinem System.</span>
+        </div>
+        <div class="field">
+          <span class="flabel">Ansicht</span>
+          <label class="check"><input type="checkbox" id="setCompact"> Kompakte Ansicht</label>
+        </div>
+      </div>
+      <p class="msg" id="lookMsg" aria-live="polite"></p>
+    </details>
+
+    <details class="card sect" data-sec="setbackup" open><summary><span>Sicherung &amp; Teilen</span><span class="smeta" id="bkMeta"></span></summary>
+      <div class="form">
+        <div class="field">
+          <label for="bkScope">Inhalt</label>
+          <select id="bkScope"></select>
+          <span class="hint">Ein einzelnes Konto, z. B. das Haushaltskonto, kann deine Partnerin in ihr Profil übernehmen.</span>
+        </div>
+        <div class="field">
+          <span class="flabel">Sicherung erstellen</span>
+          <div class="row"><button class="btn primary" id="bkDownload" type="button">Herunterladen</button><button class="btn" id="bkCopy" type="button">In Textfeld</button></div>
+          <span class="hint">Verschlüsselt mit deiner aktuellen PIN.</span>
+        </div>
+      </div>
+      <div class="field">
+        <label for="bkTxt">Sicherung (Text)</label>
+        <textarea id="bkTxt" spellcheck="false" placeholder="Hier erscheint die Sicherung. Zum Einspielen Text einfügen oder Datei wählen."></textarea>
+      </div>
+      <div class="form">
+        <div class="field"><label for="bkFile">Oder Datei wählen</label><input type="file" id="bkFile" accept=".json,application/json"></div>
+        <div class="field"><label for="bkPin">PIN der Sicherung</label><input type="password" id="bkPin" autocomplete="off" placeholder="leer = deine PIN"></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="bkMerge" type="button">Zusammenführen</button>
+        <button class="btn" id="bkReplace" type="button">Profil ersetzen</button>
+        <button class="btn danger" id="deleteProfile" type="button">Profil löschen</button>
+      </div>
+      <p class="msg" id="bkMsg" aria-live="polite"></p>
+      <div class="privacy">
+        <p><b>Wo liegen die Daten?</b> Nur in diesem Browser, verschlüsselt mit AES-256 und einem Schlüssel aus deiner PIN. Auf dem Webserver liegt nur die leere Seite, es wird nichts übertragen.</p>
+        <p><b>Zu zweit:</b> Jedes Profil ist getrennt. Für ein gemeinsames Konto exportiert ihr es und führt es im anderen Profil zusammen. Neuere Änderungen gewinnen, Löschungen werden nicht übertragen.</p>
+        <p><b>Wichtig:</b> Eine vergessene PIN lässt sich nicht zurücksetzen. Löscht der Browser seine Daten, ist alles weg. Sichere regelmäßig. <span id="bkLast"></span></p>
+        <p><b>Version:</b> Mein Finanzkonto <span class="appverlong"></span></p>
+      </div>
+    </details>
+  </section>
+  <datalist id="catList"></datalist>
+  <footer class="foot"><img src="%%LOGO_HEAD%%" alt="" width="26" height="26"><span>Ein Werkzeug von</span><b>Smooth <span>Solutions</span></b><span class="ver">· Version <span class="appver"></span></span></footer>
+  </div>
+  </div>
+</div>

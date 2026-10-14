@@ -1,0 +1,122 @@
+  <!-- Einstellungen -->
+  <section class="view" data-view="einstellungen">
+    <h1 class="vtitle">Einstellungen</h1>
+    <div class="setnav" role="navigation" aria-label="Bereiche der Einstellungen">
+      <a href="#einstellungen" data-go="einstellungen#setuser">Benutzerkonto</a>
+      <a href="#einstellungen" data-go="einstellungen#konten">Konten</a>
+      <a href="#einstellungen" data-go="einstellungen#import">Excel-Import</a>
+      <a href="#einstellungen" data-go="einstellungen#setapi">Kurse &amp; Steuern</a>
+      <a href="#einstellungen" data-go="einstellungen#setdep">Depots</a>
+      <a href="#einstellungen" data-go="einstellungen#setmail">E-Mail-Alarme</a>
+      <a href="#einstellungen" data-go="einstellungen#setdata">Daten &amp; Umzug</a>
+    </div>
+
+    <details class="card sect" data-sec="setuser" id="setuser" open><summary><span>Benutzerkonto</span><span class="smeta" id="userMeta"></span></summary>
+      <div class="form">
+        <div class="field"><label for="uName">Name</label><input type="text" id="uName" maxlength="40" autocomplete="name"></div>
+        <div class="field"><label for="uEmail">E-Mail (Anmeldung)</label><input type="email" id="uEmail" readonly></div>
+      </div>
+      <hr class="sep">
+      <div class="form">
+        <div class="field"><label for="uPwOld">Passwort ändern</label><input type="password" id="uPwOld" autocomplete="current-password" placeholder="bisheriges Passwort"></div>
+        <div class="field"><label for="uPwNew">Neues Passwort</label><input type="password" id="uPwNew" autocomplete="new-password" placeholder="mindestens 10 Zeichen"></div>
+        <div class="field"><label for="uPwNew2">Wiederholen</label><input type="password" id="uPwNew2" autocomplete="new-password"></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="uPwSave" type="button">Passwort ändern</button>
+        <button class="btn" id="uLogoutAll" type="button">Auf allen Geräten abmelden</button>
+        <button class="btn ghost" id="uLogout" type="button">Abmelden</button>
+      </div>
+      <p class="msg" id="userMsg" aria-live="polite"></p>
+      <hr class="sep">
+      <div class="form">
+        <div class="field span2">
+          <span class="flabel" id="schemeLbl">Farbschema</span>
+          <div class="schemes" id="schemes" role="radiogroup" aria-labelledby="schemeLbl">
+            <label><input type="radio" name="scheme" value="smooth"><span><i class="sws" style="--a:#985A1C;--b:#161616"></i>Smooth</span></label>
+            <label><input type="radio" name="scheme" value="nordsee"><span><i class="sws" style="--a:#1D5F8A;--b:#9CC3DE"></i>Nordsee</span></label>
+            <label><input type="radio" name="scheme" value="salbei"><span><i class="sws" style="--a:#3F6B3A;--b:#B9D2B0"></i>Salbei</span></label>
+            <label><input type="radio" name="scheme" value="pflaume"><span><i class="sws" style="--a:#7A3E6E;--b:#E2BDD9"></i>Pflaume</span></label>
+          </div>
+          <span class="hint">Hell und dunkel richten sich nach deinem System. Gilt auf allen Geräten.</span>
+        </div>
+        <div class="field"><span class="flabel">Ansicht</span><label class="check"><input type="checkbox" id="setCompact"> Kompakte Ansicht</label></div>
+      </div>
+      <p class="msg" id="lookMsg" aria-live="polite"></p>
+    </details>
+
+%%FIN_SETTINGS%%
+    <details class="card sect" data-sec="setapi" id="setapi" open><summary><span>Kurse &amp; Steuern</span><span class="smeta" id="apiMeta"></span></summary>
+      <div class="form">
+        <div class="field">
+          <label for="sRefresh">Kurse automatisch holen</label>
+          <select id="sRefresh"><option value="0">nur per Knopf</option><option value="5">alle 5 Minuten</option><option value="15">alle 15 Minuten</option><option value="60">stündlich</option></select>
+        </div>
+        <div class="field">
+          <label for="sBench">Vergleichs-ETF</label>
+          <select id="sBench"><option value="OV:FUND:IE00B4L5Y983">iShares Core MSCI World</option><option value="OV:FUND:DE0005933931">iShares Core DAX</option><option value="OV:FUND:IE00BK5BQT80">Vanguard FTSE All-World</option></select>
+        </div>
+        <div class="field">
+          <label for="sAllow">Sparer-Pauschbetrag</label>
+          <select id="sAllow"><option value="1000">1.000 € (Einzelperson)</option><option value="2000">2.000 € (Ehepaar)</option></select>
+        </div>
+      </div>
+      <div class="row"><button class="btn" id="apiTest" type="button">Kursabruf prüfen</button></div>
+      <p class="msg" id="apiMsg" aria-live="polite"></p>
+      <p class="hintline">Dein Server holt die Kurse bei onvista (Aktien, ETFs) und der EZB (Wechselkurse), News bei Google News. Meist verzögert, ohne Gewähr. Die Kursquellen erfahren nur die Wertpapiere, nie Stückzahlen oder Beträge.</p>
+    </details>
+
+%%DEP_SETDEP%%
+    <details class="card sect" data-sec="setmail" id="setmail" open><summary><span>E-Mail-Alarme</span><span class="smeta" id="mailMeta"></span></summary>
+      <p class="note">Der Server prüft deine Kursalarme alle 15 Minuten, auch wenn die Seite geschlossen ist, und schickt eine Mail, wenn einer auslöst.</p>
+      <div class="banner" id="mNoSmtp" hidden><span><b>Mailversand fehlt.</b> Auf dem Server sind noch keine SMTP-Daten eingetragen (siehe Anleitung, Schritt Mail).</span></div>
+      <div class="form">
+        <div class="field"><span class="flabel">Kursalarme per E-Mail</span><label class="check"><input type="checkbox" id="mOn"> an</label></div>
+        <div class="field"><label for="mMail">An diese Adresse (optional)</label><input type="email" id="mMail" autocomplete="email"><span class="hint">Leer = deine Anmelde-Adresse.</span></div>
+      </div>
+      <div class="row"><button class="btn primary" id="mSave" type="button">Speichern</button><button class="btn" id="mTest" type="button">Test-Mail senden</button><button class="btn" id="mStatus" type="button">Status abfragen</button></div>
+      <p class="msg" id="mMsg" aria-live="polite"></p>
+    </details>
+
+    <details class="card sect" data-sec="setdata" id="setdata" open><summary><span>Daten &amp; Umzug</span><span class="smeta" id="dataMeta"></span></summary>
+      <div class="form">
+        <div class="field">
+          <span class="flabel">Alles herunterladen</span>
+          <div class="row"><button class="btn primary" id="xAll" type="button">Export (JSON)</button></div>
+          <span class="hint">Alle Konten, Buchungen, Pläne und das Depot in einer Datei, unverschlüsselt. Gut als eigene Sicherung zusätzlich zur Datenbank.</span>
+        </div>
+        <div class="field">
+          <span class="flabel">Umzug aus den bisherigen Apps</span>
+          <span class="hint">Sicherung aus „Mein Finanzkonto“ oder „Mein Depot“ wählen und die PIN dieser Sicherung eingeben. Die Daten werden in deinem Browser entschlüsselt und zu deinen Daten hinzugefügt.</span>
+        </div>
+      </div>
+      <div class="form">
+        <div class="field"><label for="mgFile">Sicherung oder Export wählen</label><input type="file" id="mgFile" accept=".json,application/json"></div>
+        <div class="field"><label for="mgPin">PIN der Sicherung</label><input type="password" id="mgPin" autocomplete="off" placeholder="nur bei alten Sicherungen"></div>
+      </div>
+      <div class="field"><label for="mgTxt">Oder Text einfügen</label><textarea id="mgTxt" spellcheck="false" placeholder="Inhalt der Sicherungsdatei"></textarea></div>
+      <div id="mgLocal" hidden class="editbox"><h3>In diesem Browser gefunden</h3><p class="note" id="mgLocalTxt"></p><div class="sugg" id="mgLocalList"></div></div>
+      <div class="row">
+        <button class="btn primary" id="mgGo" type="button">Hinzufügen</button>
+        <button class="btn" id="mgReplace" type="button">Alles ersetzen (nur Export)</button>
+      </div>
+      <p class="msg" id="mgMsg" aria-live="polite"></p>
+      <hr class="sep">
+      <div class="form">
+        <div class="field"><label for="delPw">Benutzerkonto löschen</label><input type="password" id="delPw" autocomplete="current-password" placeholder="Passwort zur Bestätigung"></div>
+      </div>
+      <div class="row"><button class="btn danger" id="delAcc" type="button">Konto und alle Daten löschen</button></div>
+      <p class="msg" id="delMsg" aria-live="polite"></p>
+      <div class="privacy">
+        <p><b>Wo liegen die Daten?</b> In der PostgreSQL-Datenbank auf deinem Server, in Tabellen. Jede Person sieht nur ihre eigenen Daten, das erzwingt die Datenbank selbst (Row-Level Security).</p>
+        <p><b>Verbindung:</b> Nur über HTTPS. Das Passwort liegt nur als Argon2-Hash vor, die Sitzung in einem geschützten Cookie.</p>
+        <p><b>Sicherung:</b> Der Server sichert die Datenbank jede Nacht (siehe Anleitung). Zusätzlich kannst du oben jederzeit alles exportieren.</p>
+        <p><b>Version:</b> Meine Finanzen <span class="appverlong"></span></p>
+      </div>
+    </details>
+  </section>
+  <datalist id="catList"></datalist>
+  <footer class="foot"><img src="%%LOGO_HEAD%%" alt="" width="26" height="26"><span>Ein Werkzeug von</span><b>Smooth <span>Solutions</span></b><span class="ver">· Version <span class="appver"></span></span></footer>
+  </div>
+  </div>
+</div>

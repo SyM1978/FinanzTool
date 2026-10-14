@@ -1,0 +1,102 @@
+# Meine Finanzen – für Dokploy (Typ „Docker Compose“) oder lokal mit docker compose.
+# Alle Werte kommen aus der .env bzw. dem Environment-Tab in Dokploy (siehe .env.example).
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql://finanzen_app:${APP_DB_PASSWORD:?APP_DB_PASSWORD fehlt}@db:5432/finanzen
+  REGISTRATION: ${REGISTRATION:-invite}
+  INVITE_CODE: ${INVITE_CODE:-}
+  MIN_PASSWORD: ${MIN_PASSWORD:-10}
+  SESSION_DAYS: ${SESSION_DAYS:-30}
+  COOKIE_SECURE: ${COOKIE_SECURE:-1}
+  APP_URL: ${APP_URL:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_TLS: ${SMTP_TLS:-starttls}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  MAIL_FROM: ${MAIL_FROM:-}
+  TZ: ${TZ:-Europe/Berlin}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: finanzen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finanzen"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # spielt bei jedem Deploy das Schema ein (idempotent, Daten bleiben)
+  migrate:
+    build: .
+    restart: "no"
+    command: ["python", "-m", "finanzen.migrate"]
+    environment:
+      ADMIN_DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/finanzen
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+  # die App (in Dokploy die Domain auf diesen Dienst, Port 8000)
+  app:
+    build: .
+    restart: unless-stopped
+    environment: *app-env
+    expose:
+      - "8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Kursalarme per E-Mail: prüft werktags 8–22 Uhr alle 15 Minuten
+  alerts:
+    build: .
+    restart: unless-stopped
+    command: ["python", "-m", "finanzen.alerts", "loop"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      disable: true
+
+  # Sicherung jede Nacht um 3:15, 14 Tage aufbewahrt (Volume "backups")
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Sicherung täglich um 03:15 ($$TZ)"
+        while true; do
+          if [ "$$(date +%H%M)" = "0315" ]; then
+            f=/backups/finanzen-$$(date +%F).dump
+            pg_dump -h db -U postgres -Fc finanzen > "$$f" && echo "gesichert: $$f"
+            find /backups -name 'finanzen-*.dump' -mtime +14 -delete
+            sleep 61
+          fi
+          sleep 30
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  backups:
