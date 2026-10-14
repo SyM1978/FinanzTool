@@ -40,8 +40,17 @@ def main() -> int:
                 print("Schema eingespielt, Version", v[0] if v else "?")
                 return 0
         except psycopg.OperationalError as e:
-            print("Datenbank noch nicht bereit:", str(e).strip().splitlines()[0])
+            msg = str(e).strip().splitlines()[0]
+            print("Datenbank noch nicht bereit:", msg, flush=True)
+            if "password authentication failed" in msg:
+                print("Das Passwort passt nicht zur Datenbank. POSTGRES_PASSWORD gilt nur beim allerersten Start; "
+                      "wurde es später geändert, das alte Passwort wieder eintragen.", flush=True)
+                return 1
             time.sleep(2)
+        except psycopg.Error as e:
+            print("Fehler beim Einspielen des Schemas:", str(e).strip(), flush=True)
+            return 1
+    print("Datenbank nach 60 Sekunden nicht erreichbar.", flush=True)
     return 1
 
 

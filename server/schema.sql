@@ -343,9 +343,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step bigint  NOT NULL DEFAU
 ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_codes text[]  NOT NULL DEFAULT '{}'; -- SHA-256 der Notfall-Codes
 GRANT UPDATE (totp_secret, totp_enabled, totp_last_step, recovery_codes) ON users TO finanzen_app;
 -- Wer schon vor Version 2 ein Konto hatte, gilt als bestätigt
-DO $$ BEGIN
-  IF to_regclass('fin.meta') IS NOT NULL AND EXISTS (SELECT 1 FROM fin.meta WHERE key = 'schema_version' AND value = '1') THEN
-    UPDATE fin.users SET email_verified = true WHERE NOT email_verified;
+DO $$
+DECLARE v text;
+BEGIN
+  IF to_regclass('fin.meta') IS NOT NULL THEN          -- bei frischer Datenbank gibt es meta noch nicht
+    EXECUTE 'SELECT value FROM fin.meta WHERE key = ''schema_version''' INTO v;
+    IF v = '1' THEN
+      UPDATE fin.users SET email_verified = true WHERE NOT email_verified;
+    END IF;
   END IF;
 END $$;
 
