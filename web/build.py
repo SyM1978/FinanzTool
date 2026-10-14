@@ -150,7 +150,21 @@ d_ui2 = d_ui2[:d_ui2.index("/* ---------- Start ---------- */")]
 # Positionen sortierbar
 d_ui2 = rep(d_ui2, '$("posBody").innerHTML=s.rows.map(function(r,i){', 'renderSortHead();$("posBody").innerHTML=sortRows(s.rows).map(function(r,i){', where="dep sort")
 d_ui2 = rep(d_ui2, '\'><td><b class="pn">\'+esc(p.name)', '\'><td class="pnc">\'+markBtn(p)+\'<b class="pn">\'+esc(p.name)', where="dep mark")
-d_ui2 = d_ui2.replace("/* Depotverlauf */", rd(SRC, "dep_sort.js") + "\n/* Depotverlauf */", 1)
+d_ui2 = rep(d_ui2, '(closed?" · verkauft":"")+\'</span></td><td class="r mono">\'+(closed?"–":fmtQty(r.shares))', '(closed?" · verkauft":"")+\'</span>\'+catChip(p)+\'</td><td class="r mono">\'+(closed?"–":fmtQty(r.shares))', where="dep catchip")
+d_ui2 = rep(d_ui2, '  $("sumRows").textContent=act.length?', '  decorateGroups(s);\n  $("sumRows").textContent=act.length?', where="dep groups")
+d_ui2 = rep(d_ui2, 'var p=curPos();if(!p)return;var n=$("eName").value.trim()', 'var p=curPos();if(!p)return;var cv=$("eCat").value.trim().slice(0,30);if(cv)p.cat=cv;else delete p.cat;var n=$("eName").value.trim()', where="dep ecat save")
+d_ui2 = d_ui2.replace("/* Depotverlauf */", rd(SRC, "dep_sort.js") + rd(SRC, "dep_cat.js") + "\n/* Depotverlauf */", 1)
+
+# Alarme: mehrere Wertpapiere, neue Bedingung „± %“
+d_ui3 = cut(d_ui3, '$("alForm").addEventListener("submit"', '$("alList").addEventListener("click"', "dep alarm submit")
+d_ui3 = cut(d_ui3, "/* ---------- Alarme ---------- */", "function renderAlertList(){", "dep alarm sel")
+d_ui3 = d_ui3.replace("function renderAlertList(){", rd(SRC, "dep_alarm.js") + "\nfunction renderAlertList(){", 1)
+d_ui3 = rep(d_ui3, 'daily=a.type==="dayDown"||a.type==="dayUp";', 'daily=/^day/.test(a.type);', where="dep daily")
+d_ui3 = rep(d_ui3, 'function alertValTxt(a){return a.type==="dayDown"||a.type==="dayUp"?NFP.format', 'function alertValTxt(a){return /^day/.test(a.type)?(a.type==="dayMove"?"± ":"")+NFP.format', where="dep altxt")
+d_calc2 = rep(d_calc2, 'var ALTYPE={above:"steigt auf",below:"fällt auf",dayDown:"fällt heute um",dayUp:"steigt heute um"};', 'var ALTYPE={above:"steigt auf",below:"fällt auf",dayDown:"fällt heute um",dayUp:"steigt heute um",dayMove:"bewegt sich heute um"};', where="calc altype")
+d_calc2 = rep(d_calc2, '  if(a.type==="dayUp")return ch>=Math.abs(v);', '  if(a.type==="dayUp")return ch>=Math.abs(v);\n  if(a.type==="dayMove")return Math.abs(ch)>=Math.abs(v);', where="calc daymove")
+d_ui3 = rep(d_ui3, 'depOpts($("eDepot"),false);$("eDepot").value=p.depot||defaultDepot(D);', 'depOpts($("eDepot"),false);$("eDepot").value=p.depot||defaultDepot(D);\n  if(document.activeElement!==$("eCat"))$("eCat").value=p.cat||"";$("catPosList").innerHTML=catList().map(function(k){return \'<option value="\'+esc(k)+\'">\'}).join("");', where="dep ecat fill")
+d_ui3 = rep(d_ui3, ':ui.alloc==="cur"?(r.cur==="GBp"?"GBP":r.cur||"EUR"):PKIND', ':ui.alloc==="cur"?(r.cur==="GBp"?"GBP":r.cur||"EUR"):ui.alloc==="cat"?(r.p.cat||"Ohne Kategorie"):PKIND', where="dep alloc cat")
 
 # Mail-Alarme laufen über den Server (Konto des Nutzers)
 d_ui3 = cut(d_ui3, "/* ---------- E-Mail-Alarme: Abgleich mit dem Webspace ---------- */", "/* ---------- Sparpläne ---------- */", "dep mail")
@@ -218,6 +232,18 @@ d_html = rep(d_html, '<thead><tr><th>Wertpapier</th><th class="r">Stück</th><th
   '<thead><tr id="posHead">' + '<th><button class="sortbtn mksort" type="button" data-sort="mark" title="Nach Markierung sortieren" aria-label="Nach Markierung sortieren"><b class="mkdot on" style="--mk:var(--muted)"></b><i aria-hidden="true"></i></button>' + '<button class="sortbtn" type="button" data-sort="name" title="Sortieren nach Wertpapier">Wertpapier<i aria-hidden="true"></i></button></th>' + "".join('<th%s><button class="sortbtn" type="button" data-sort="%s" title="Sortieren nach %s">%s<i aria-hidden="true"></i></button></th>' % (c, k, t, t)
   for c, k, t in [(' class="r"', "shares", "Stück"), (' class="r"', "price", "Kurs"), (' class="r"', "day", "Heute"),
                   (' class="r"', "value", "Wert"), (' class="r"', "gain", "Gewinn/Verlust"), (' class="r"', "share", "Anteil")]) + '</tr></thead>', where="dp sorthead")
+d_html = rep(d_html, '<div class="field span2"><label for="alSym">Wertpapier</label><select id="alSym"></select></div>',
+  '<div class="field span2"><span class="flabel" id="alSymLbl">Wertpapiere <small class="hint" id="alCount"></small></span>'
+  '<div class="alpick" id="alSyms" role="group" aria-labelledby="alSymLbl"></div>'
+  '<div class="alpickbar"><span class="hint">Auswählen:</span><button type="button" class="catopt" id="alAll">alle im Bestand</button><button type="button" class="catopt" id="alWatch">+ Watchlist</button>'
+  '<span id="alCatWrap" hidden><span class="hint">Kategorie:</span> <span id="alCats"></span></span><button type="button" class="catopt" id="alNone">keine</button></div></div>', where="al pick")
+d_html = rep(d_html, '<option value="dayDown">heute fällt um mindestens (%)</option><option value="dayUp">heute steigt um mindestens (%)</option>',
+  '<option value="dayMove">sich heute um mindestens ± bewegt (%)</option><option value="dayDown">heute fällt um mindestens (%)</option><option value="dayUp">heute steigt um mindestens (%)</option>', where="al types")
+d_html = rep(d_html, '<button class="btn primary" type="submit">Alarm anlegen</button>', '<button class="btn primary" type="submit" id="alGo">Alarm anlegen</button><button class="btn danger" type="button" id="alDelAll">Alle Alarme löschen</button>', where="al go")
+d_html = rep(d_html, '<div class="field"><label for="eDepot">Depot</label><select id="eDepot"></select></div>',
+  '<div class="field"><label for="eDepot">Depot</label><select id="eDepot"></select></div><div class="field"><label for="eCat">Kategorie</label><input type="text" id="eCat" maxlength="30" list="catPosList" placeholder="z. B. Dividende, Wachstum"><datalist id="catPosList"></datalist></div>', where="pedit cat")
+d_html = rep(d_html, '<label><input type="radio" name="alm" value="kind"><span>Art</span></label>', '<label><input type="radio" name="alm" value="kind"><span>Art</span></label>\n          <label><input type="radio" name="alm" value="cat"><span>Kategorie</span></label>', where="alloc cat")
+d_html = rep(d_html, '<span class="smeta" id="sumRows"></span></summary>\n        <div class="tablewrap"><table class="postab">', '<span class="smeta" id="sumRows"></span></summary>\n        <div class="postools"><label for="posGroup">Gruppieren</label><select id="posGroup"><option value="">nicht gruppieren</option><option value="cat">nach Kategorie</option><option value="mark">nach Markierung</option></select><span class="hint">Kategorie: im Namen auf „+ Kategorie“ tippen</span></div><div class="tablewrap"><table class="postab">', where="pos tools")
 dep_views = views(d_html, ["depot", "position", "zeitung", "watchlist", "alarme", "neu", "dauswertung"], "dep")
 dep_nav = nav(d_html, "dep")
 dep_setdep = section(d_html, "setdep", "dep")

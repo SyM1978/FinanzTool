@@ -34,7 +34,7 @@ td.pnc .pn{display:inline}
 .mkdot:hover{border-color:var(--muted)}
 .mkdot.on{border:0;background:var(--mk);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--mk)}
 .mkdot:focus-visible,.mkc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.mkpop{position:absolute;left:4px;top:calc(100% - 6px);z-index:15;display:flex;gap:6px;align-items:center;padding:7px 9px;background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.14)}
+.mkpop{position:fixed;z-index:15;display:flex;gap:6px;align-items:center;padding:7px 9px;background:var(--surface);border:1px solid var(--line);border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.14)}
 .mkc{all:unset;cursor:pointer;width:18px;height:18px;border-radius:50%;background:var(--mk);flex:none}
 .mkc:hover{transform:scale(1.15)}
 .mkc.none{background:var(--surface-2);color:var(--muted);font-size:13px;line-height:18px;text-align:center}
@@ -81,3 +81,37 @@ td.pnc .pn{display:inline}
 .codelist code{font-family:var(--font-mono);font-size:15px;letter-spacing:.05em}
 input[type=email]{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:var(--font-mono);font-size:14px;color:var(--ink);width:100%;min-width:0}
 input[type=email]:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+/* ===== Kategorien und Gruppen ===== */
+.catchip{all:unset;cursor:pointer;display:inline-block;margin-left:8px;font-size:11.5px;font-weight:600;line-height:1;padding:3px 8px;border-radius:999px;border:1px dashed var(--line);color:var(--muted);vertical-align:1px}
+.catchip:hover{border-color:var(--muted);color:var(--ink)}
+.catchip.on{border:1px solid transparent;background:var(--accent-soft);color:var(--accent)}
+.catchip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.postab tr:not(:hover) .catchip:not(.on){opacity:.55}
+.catpop{position:fixed;z-index:16;display:flex;flex-direction:column;gap:8px;min-width:240px;max-width:320px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.16);cursor:default}
+.catopts{display:flex;flex-wrap:wrap;gap:6px}
+.catopts:empty{display:none}
+.catopt{all:unset;cursor:pointer;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.catopt:hover{border-color:var(--accent);color:var(--accent)}
+.catopt.on{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.catopt:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.catnew{display:flex;gap:6px}
+.catnew input{flex:1;min-width:0;font-size:13px;padding:6px 8px}
+.catnew .btn{padding:6px 12px}
+.catpop .linkbtn{align-self:flex-start;font-size:12.5px;color:var(--bad)}
+.postools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:6px;font-size:13px}
+.postools label{font-weight:600;color:var(--muted)}
+.postools select{font-size:13px;padding:5px 8px;width:auto}
+.postools .hint{margin:0}
+tr.grp td{background:var(--surface-2);font-size:13px;padding-top:9px;padding-bottom:9px;border-top:1px solid var(--line)}
+tr.grp td small{color:var(--muted);font-weight:500;margin-left:4px}
+tr.grp .mkdot{margin-right:8px;cursor:default}
+/* ===== Alarme: Mehrfachauswahl ===== */
+.alpick{display:flex;flex-wrap:wrap;gap:6px;max-height:230px;overflow:auto;padding:2px}
+.alchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px 6px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:13.5px;cursor:pointer;user-select:none}
+.alchip input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
+.alchip small{color:var(--muted);font-size:11.5px}
+.alchip.on{border-color:var(--accent);background:var(--accent-soft)}
+.alchip.dim:not(.on){opacity:.7}
+.alpickbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.alpickbar .hint{margin:0}
+#alCount{font-weight:600;color:var(--accent);margin-left:6px}

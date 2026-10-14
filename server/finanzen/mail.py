@@ -1,5 +1,6 @@
 """E-Mail-Versand über SMTP (Kursalarme, Bestätigung, Passwort zurücksetzen)."""
 import smtplib
+import socket
 import ssl
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
@@ -8,6 +9,19 @@ from .config import settings
 
 
 def send_mail(to: str, subject: str, text: str) -> None:
+    try:
+        _send(to, subject, text)
+    except socket.gaierror:
+        raise RuntimeError(f"Mailserver „{settings.smtp_host}“ nicht gefunden. SMTP_HOST prüfen (nur der Servername, z. B. smtp.ionos.de, ohne https:// und ohne Port).")
+    except smtplib.SMTPAuthenticationError:
+        raise RuntimeError("Anmeldung am Mailserver abgelehnt. SMTP_USER und SMTP_PASSWORD prüfen.")
+    except smtplib.SMTPException:
+        raise
+    except OSError as e:   # Zeitüberschreitung, Verbindung abgelehnt, TLS-Fehler
+        raise RuntimeError(f"Mailserver {settings.smtp_host}:{settings.smtp_port} nicht erreichbar ({e}). Port und SMTP_TLS prüfen (587 = starttls, 465 = ssl).")
+
+
+def _send(to: str, subject: str, text: str) -> None:
     if not settings.mail_ready:
         raise RuntimeError("Mailversand nicht eingerichtet (SMTP_HOST und MAIL_FROM in der .env)")
     msg = EmailMessage()

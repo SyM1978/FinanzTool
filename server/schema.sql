@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS price_alerts (
   user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   id           text NOT NULL,
   sym          text NOT NULL, name text NOT NULL,
-  type         text NOT NULL CHECK (type IN ('above','below','dayDown','dayUp')),
+  type         text NOT NULL,
   value        numeric(20,6) NOT NULL CHECK (value > 0),
   hit_at       bigint NOT NULL DEFAULT 0, hit_day date,     -- Anzeige in der Seite
   mail_armed   boolean NOT NULL DEFAULT true,               -- Zustand des Mail-Versands
@@ -434,10 +434,16 @@ REVOKE ALL ON FUNCTION fin.auth_lookup2(text), fin.auth_totp_used(uuid, bigint, 
 GRANT EXECUTE ON FUNCTION fin.auth_lookup2(text), fin.auth_totp_used(uuid, bigint, text), fin.auth_token_create(uuid, text, bytea, int),
   fin.auth_token_user(bytea, text), fin.auth_verify_email(bytea), fin.auth_reset_password(bytea, text), fin.auth_mark_verified(uuid) TO finanzen_app;
 
+-- ---------------------------------------------------------------------
+-- Version 3: Kursalarm „bewegt sich heute um ± %“
+-- ---------------------------------------------------------------------
+ALTER TABLE price_alerts DROP CONSTRAINT IF EXISTS price_alerts_type_check;
+ALTER TABLE price_alerts ADD CONSTRAINT price_alerts_type_check CHECK (type IN ('above','below','dayDown','dayUp','dayMove'));
+
 RESET ROLE;
 
 -- Schemaversion (für spätere Migrationen)
 CREATE TABLE IF NOT EXISTS fin.meta (key text PRIMARY KEY, value text NOT NULL);
 ALTER TABLE fin.meta OWNER TO finanzen_owner;
-INSERT INTO fin.meta VALUES ('schema_version', '2') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO fin.meta VALUES ('schema_version', '3') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 GRANT SELECT ON fin.meta TO finanzen_app;

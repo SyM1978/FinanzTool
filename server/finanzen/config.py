@@ -41,12 +41,12 @@ class Settings:
         self.http_proxy = e("OUTBOUND_PROXY", "") or None
 
         # E-Mail für Kursalarme
-        self.smtp_host = e("SMTP_HOST", "")
+        self.smtp_host = e("SMTP_HOST", "").strip().strip("'\"").strip()
         self.smtp_port = int(e("SMTP_PORT", "587"))
         self.smtp_user = e("SMTP_USER", "")
         self.smtp_password = e("SMTP_PASSWORD", "")
         self.smtp_tls = e("SMTP_TLS", "starttls").strip().lower()   # starttls | ssl | none
-        self.mail_from = e("MAIL_FROM", "")
+        self.mail_from = e("MAIL_FROM", "").strip().strip("'\"").strip()
         self.app_url = e("APP_URL", "")                                 # Link in den Mails
 
     @property

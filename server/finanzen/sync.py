@@ -287,7 +287,7 @@ _reg(Coll("watch", "watchlist", [
 
 _reg(Coll("alerts", "price_alerts", [
     ("id", "id", s_id(True), "keep"), ("sym", "sym", s_text(60, True), "keep"), ("name", "name", s_text(120, True), "keep"),
-    ("type", "type", s_enum(("above", "below", "dayDown", "dayUp")), "keep"), ("value", "value", s_num(True, lo=1e-9), "keep"),
+    ("type", "type", s_enum(("above", "below", "dayDown", "dayUp", "dayMove")), "keep"), ("value", "value", s_num(True, lo=1e-9), "keep"),
     ("hitAt", "hit_at", s_u, "keep"), ("hitDay", "hit_day", s_date(), "skipnull"), ("u", "u", s_u, "keep"),
 ], on_update_extra=", mail_armed = CASE WHEN t.type IS DISTINCT FROM EXCLUDED.type OR t.value IS DISTINCT FROM EXCLUDED.value OR t.sym IS DISTINCT FROM EXCLUDED.sym THEN true ELSE t.mail_armed END"))
 

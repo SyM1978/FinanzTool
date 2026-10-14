@@ -39,6 +39,8 @@ def hit(a: dict, q: dict) -> bool:
         return ch <= -abs(v)
     if t == "dayUp":
         return ch >= abs(v)
+    if t == "dayMove":
+        return abs(ch) >= abs(v)
     return False
 
 
@@ -60,7 +62,7 @@ def run(verbose: bool = False) -> dict:
         q = market.quotes(list({a["sym"] for a in alerts}))["quotes"]
         hits, updates = [], []
         for a in alerts:
-            daily = a["type"] in ("dayDown", "dayUp")
+            daily = a["type"].startswith("day")
             h = hit(a, q.get(a["sym"]))
             if h and ((daily and a["mail_day"] != today) or (not daily and a["mail_armed"])):
                 hits.append((a, q[a["sym"]]))
@@ -73,7 +75,8 @@ def run(verbose: bool = False) -> dict:
             for a, qq in hits:
                 ch = (qq["price"] / qq["prev"] - 1) * 100 if qq.get("prev") else 0
                 cond = {"above": "steigt auf " + de(float(a["value"])), "below": "fällt auf " + de(float(a["value"])),
-                        "dayDown": f"fällt heute um {de(float(a['value']), 1)} %", "dayUp": f"steigt heute um {de(float(a['value']), 1)} %"}[a["type"]]
+                        "dayDown": f"fällt heute um {de(float(a['value']), 1)} %", "dayUp": f"steigt heute um {de(float(a['value']), 1)} %",
+                        "dayMove": f"bewegt sich heute um ± {de(float(a['value']), 1)} %"}[a["type"]]
                 lines.append(f"• {a['name']}: {cond}\n  Kurs jetzt {de(qq['price'])} {qq.get('currency') or ''} ({'+' if ch >= 0 else ''}{de(ch, 1)} % heute)")
             subj = f"Kursalarm: {hits[0][0]['name']}" if len(hits) == 1 else f"{len(hits)} Kursalarme in deinem Depot"
             link = f"\n\n{settings.app_url.rstrip('/')}/#alarme" if settings.app_url else ""

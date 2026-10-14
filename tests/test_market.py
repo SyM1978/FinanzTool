@@ -37,13 +37,15 @@ with TestClient(app) as A:
     A.post("/api/sync", json={"upsert": {"alerts": [
         {"id": "a1", "sym": "OV:STOCK:DE0007164600", "name": "SAP SE", "type": "above", "value": 200, "u": 1},
         {"id": "a2", "sym": "OV:STOCK:DE0008404005", "name": "Allianz SE", "type": "below", "value": 100, "u": 1},
-        {"id": "a3", "sym": "OV:STOCK:US0378331005", "name": "Apple", "type": "dayUp", "value": 1, "u": 1}]}}, headers=H)
+        {"id": "a3", "sym": "OV:STOCK:US0378331005", "name": "Apple", "type": "dayUp", "value": 1, "u": 1},
+        {"id": "a4", "sym": "OV:STOCK:US0378331005", "name": "Apple", "type": "dayMove", "value": 1, "u": 1},
+        {"id": "a5", "sym": "OV:STOCK:DE0008404005", "name": "Allianz SE", "type": "dayMove", "value": 1, "u": 1}]}}, headers=H)
     r = alerts.run(); check(r["users"] == 0, "Mail-Alarme aus -> niemand")
     A.post("/api/auth/profile", json={"alert_mail": True}, headers=H)
-    r = alerts.run(); check(r == {"users": 1, "sent": 2, "errors": 0}, "zwei Alarme " + str(r))
+    r = alerts.run(); check(r == {"users": 1, "sent": 3, "errors": 0}, "drei Alarme (Allianz ±1 % nicht erreicht) " + str(r))
     mails = glob.glob("/tmp/mf_mails/*"); check(len(mails) == 1, "eine Sammelmail")
     txt = open(mails[0]).read()
-    check("SAP SE: steigt auf 200,00" in txt and "Apple: steigt heute um 1,0 %" in txt and "Allianz" not in txt and "https://finanzen.example.de/#alarme" in txt, txt[-600:])
+    check("SAP SE: steigt auf 200,00" in txt and "Apple: steigt heute um 1,0 %" in txt and "Apple: bewegt sich heute um ± 1,0 %" in txt and "Allianz" not in txt and "https://finanzen.example.de/#alarme" in txt, txt[-600:])
     r = alerts.run(); check(r["sent"] == 0, "nicht doppelt")
     psql("UPDATE fin.market_cache SET data = jsonb_set(data, '{price}', '150') WHERE key = 'q:OV:STOCK:DE0007164600'")
     alerts.run(); check(psql("SELECT mail_armed FROM fin.price_alerts WHERE id='a1'") == "t", "wieder scharf, wenn Kurs zurück")
