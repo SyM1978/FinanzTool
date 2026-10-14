@@ -1,7 +1,8 @@
-"""Anmeldung: Konto anlegen, Login, Logout, Passwort ändern, Konto löschen.
+"""Anmeldung: Konto anlegen, E-Mail bestätigen, Login (optional mit Zwei-Faktor),
+Passwort vergessen/zurücksetzen, Passwort ändern, Abmelden, Konto löschen.
 
 Sitzung = zufälliges Token im Cookie (HttpOnly, Secure, SameSite=Strict).
-In der Datenbank steht nur der SHA-256 des Tokens."""
+In der Datenbank steht nur der SHA-256 des Tokens, ebenso bei Mail-Links."""
 import hashlib
 import hmac
 import re
@@ -14,19 +15,22 @@ from typing import Optional
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from . import db
+from . import db, totp
 from .config import settings
+from .mail import send_mail
 
 COOKIE = "fin_session"
 router = APIRouter(prefix="/api/auth")
 ph = PasswordHasher()                 # argon2id mit sicheren Standardwerten
 _DUMMY = ph.hash("ungueltig-" + secrets.token_hex(8))
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+VERIFY_MIN, RESET_MIN = 48 * 60, 60
 
 
-# ---------- Bremse gegen Passwort-Raten ----------
+# ---------- Bremse gegen Raten und Mail-Flut ----------
 class _Limiter:
     def __init__(self, n: int, window: float) -> None:
         self.n, self.window = n, window
@@ -53,10 +57,12 @@ class _Limiter:
 fail_by_email = _Limiter(8, 15 * 60)
 fail_by_ip = _Limiter(30, 15 * 60)
 register_by_ip = _Limiter(10, 60 * 60)
+mail_by_ip = _Limiter(8, 60 * 60)
+mail_by_email = _Limiter(5, 60 * 60)
 
 
 def client_ip(req: Request) -> str:
-    # hinter nginx: X-Real-IP wird dort gesetzt (siehe deploy/nginx.conf)
+    # hinter nginx/Traefik: X-Real-IP setzt der Proxy
     return req.headers.get("x-real-ip") or (req.client.host if req.client else "?")
 
 
@@ -64,17 +70,23 @@ def _hash_token(tok: str) -> bytes:
     return hashlib.sha256(tok.encode()).digest()
 
 
-def _set_cookie(resp: Response, tok: str) -> None:
-    resp.set_cookie(COOKIE, tok, max_age=settings.session_days * 86400, httponly=True,
+def _new_session(resp: Response, user_id, req: Request, remember: bool = True) -> None:
+    tok = secrets.token_urlsafe(32)
+    days = settings.session_days if remember else 1
+    with db.tx() as c:
+        c.execute("SELECT fin.auth_session_create(%s, %s, %s, %s)",
+                  (_hash_token(tok), user_id, days, req.headers.get("user-agent", "")[:200]))
+    # ohne „angemeldet bleiben“: Sitzungs-Cookie, endet mit dem Schließen des Browsers
+    resp.set_cookie(COOKIE, tok, max_age=days * 86400 if remember else None, httponly=True,
                     secure=settings.cookie_secure, samesite="strict", path="/")
 
 
-def _new_session(resp: Response, user_id, req: Request) -> None:
-    tok = secrets.token_urlsafe(32)
-    with db.tx() as c:
-        c.execute("SELECT fin.auth_session_create(%s, %s, %s, %s)",
-                  (_hash_token(tok), user_id, settings.session_days, req.headers.get("user-agent", "")[:200]))
-    _set_cookie(resp, tok)
+def _base_url(req: Request) -> str:
+    return (settings.app_url or str(req.base_url)).rstrip("/")
+
+
+def _need(status: int, need: str, detail: str) -> JSONResponse:
+    return JSONResponse({"detail": detail, "need": need}, status_code=status)
 
 
 class User(BaseModel):
@@ -102,7 +114,7 @@ def optional_user(req: Request) -> Optional[User]:
         return None
 
 
-# ---------- Endpunkte ----------
+# ---------- Eingaben ----------
 class RegisterIn(BaseModel):
     email: str
     name: str
@@ -113,6 +125,22 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: str
     password: str
+    code: str = ""
+    remember: bool = True
+
+
+class EmailIn(BaseModel):
+    email: str
+
+
+class TokenIn(BaseModel):
+    token: str
+
+
+class ResetIn(BaseModel):
+    token: str
+    password: str
+    code: str = ""
 
 
 class PasswordIn(BaseModel):
@@ -128,26 +156,83 @@ class ProfileIn(BaseModel):
 
 class DeleteIn(BaseModel):
     password: str
+    code: str = ""
 
 
-def _check_password(pw: str) -> None:
+class PwCodeIn(BaseModel):
+    password: str = ""
+    code: str = ""
+
+
+def _check_password(pw: str, email: str = "") -> None:
     if len(pw) < settings.min_password:
         raise HTTPException(400, f"Das Passwort braucht mindestens {settings.min_password} Zeichen.")
     if len(pw) > 200:
         raise HTTPException(400, "Das Passwort ist zu lang.")
+    low = pw.lower()
+    if len(set(low)) < 4 or (email and email.split("@")[0].lower() in low and len(email.split("@")[0]) > 3):
+        raise HTTPException(400, "Das Passwort ist zu leicht zu erraten. Bitte ein anderes wählen.")
 
 
+def _pw_ok(pw_hash: Optional[str], pw: str) -> bool:
+    try:
+        return bool(ph.verify(pw_hash or _DUMMY, pw[:200])) and pw_hash is not None
+    except (VerifyMismatchError, VerificationError, InvalidHashError):
+        return False
+
+
+def _second_factor(row: dict, code: str) -> bool:
+    """Prüft TOTP-Code oder Notfall-Code und verbraucht ihn."""
+    code = (code or "").strip()
+    if not code:
+        return False
+    step = totp.verify(row["totp_secret"] or "", code, row["totp_last_step"] or 0)
+    with db.tx() as c:
+        if step is not None:
+            return c.execute("SELECT fin.auth_totp_used(%s, %s, NULL) AS ok", (row["id"], step)).fetchone()["ok"]
+        if totp.norm_recovery(code):
+            return c.execute("SELECT fin.auth_totp_used(%s, 0, %s) AS ok", (row["id"], totp.hash_recovery(code))).fetchone()["ok"]
+    return False
+
+
+# ---------- Mails ----------
+def _mail_link(req: Request, uid, email: str, name: str, kind: str) -> None:
+    tok = secrets.token_urlsafe(32)
+    with db.tx() as c:
+        c.execute("SELECT fin.auth_token_create(%s, %s, %s, %s)", (uid, kind, _hash_token(tok), VERIFY_MIN if kind == "verify" else RESET_MIN))
+    link = f"{_base_url(req)}/#{kind}={tok}"
+    if kind == "verify":
+        send_mail(email, "Bitte bestätige deine E-Mail-Adresse",
+                  f"Hallo {name},\n\nwillkommen bei Meine Finanzen! Bitte bestätige deine E-Mail-Adresse mit diesem Link:\n\n{link}\n\n"
+                  "Der Link gilt 48 Stunden. Wenn du dich nicht angemeldet hast, ignoriere diese Mail einfach.\n\n-- \nMeine Finanzen · Smooth Solutions\n")
+    else:
+        send_mail(email, "Passwort zurücksetzen",
+                  f"Hallo {name},\n\nfür dein Konto bei Meine Finanzen wurde ein neues Passwort angefordert. Hier kannst du es festlegen:\n\n{link}\n\n"
+                  "Der Link gilt 60 Minuten und funktioniert nur einmal. Wenn du das nicht warst, ignoriere diese Mail – dein Passwort bleibt dann unverändert.\n\n"
+                  "-- \nMeine Finanzen · Smooth Solutions\n")
+
+
+def _mail_limit(req: Request, email: str) -> None:
+    ip = client_ip(req)
+    if mail_by_ip.blocked(ip) or mail_by_email.blocked(email):
+        raise HTTPException(429, "Zu viele Anfragen. Bitte etwas später noch einmal.")
+    mail_by_ip.add(ip)
+    mail_by_email.add(email)
+
+
+# ---------- Zustand ----------
 def _reg_state() -> dict:
     with db.tx() as c:
         n = c.execute("SELECT fin.auth_user_count() AS n").fetchone()["n"]
     mode = settings.registration
+    base = {"verify": settings.must_verify, "reset": settings.mail_ready, "min": settings.min_password}
     if n == 0:
-        return {"open": True, "first": True, "invite": bool(settings.invite_code)}
+        return {**base, "open": True, "first": True, "invite": bool(settings.invite_code)}
     if mode == "open":
-        return {"open": True, "first": False, "invite": False}
+        return {**base, "open": True, "first": False, "invite": False}
     if mode == "invite" and settings.invite_code:
-        return {"open": True, "first": False, "invite": True}
-    return {"open": False, "first": False, "invite": False}
+        return {**base, "open": True, "first": False, "invite": True}
+    return {**base, "open": False, "first": False, "invite": False}
 
 
 @router.get("/me")
@@ -156,12 +241,14 @@ def me(req: Request):
     if not u:
         return {"user": None, "registration": _reg_state()}
     with db.tx(u.id) as c:
-        r = c.execute("SELECT alert_mail, alert_email::text AS alert_email, alert_last, alert_error, created_at FROM fin.users WHERE id = %s", (u.id,)).fetchone()
+        r = c.execute("SELECT alert_mail, alert_email::text AS alert_email, alert_last, alert_error, created_at, totp_enabled, "
+                      "cardinality(recovery_codes) AS rc FROM fin.users WHERE id = %s", (u.id,)).fetchone()
     return {"user": {**u.model_dump(), "alert_mail": r["alert_mail"], "alert_email": r["alert_email"] or "",
                      "alert_last": r["alert_last"].isoformat() if r["alert_last"] else None, "alert_error": r["alert_error"] or "",
-                     "mail_ready": settings.mail_ready}}
+                     "mail_ready": settings.mail_ready, "totp": r["totp_enabled"], "recovery_left": r["rc"]}}
 
 
+# ---------- Registrieren & bestätigen ----------
 @router.post("/register")
 def register(body: RegisterIn, req: Request, resp: Response):
     ip = client_ip(req)
@@ -179,19 +266,65 @@ def register(body: RegisterIn, req: Request, resp: Response):
         raise HTTPException(400, "Bitte eine gültige E-Mail-Adresse eingeben.")
     if not name:
         raise HTTPException(400, "Bitte einen Namen eingeben.")
-    _check_password(body.password)
-    h = ph.hash(body.password)
+    _check_password(body.password, email)
+    verify = settings.must_verify and not st["first"]      # das erste Konto (Verwalter) kommt immer direkt rein
     try:
         with db.tx() as c:
-            uid = c.execute("SELECT fin.auth_register(%s, %s, %s) AS id", (email, name, h)).fetchone()["id"]
-    except Exception as e:  # doppelte E-Mail
-        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
-            raise HTTPException(409, "Zu dieser E-Mail gibt es schon ein Konto.")
-        raise
+            uid = c.execute("SELECT fin.auth_register(%s, %s, %s) AS id", (email, name, ph.hash(body.password))).fetchone()["id"]
+    except Exception as e:
+        if "unique" not in str(e).lower() and "duplicate" not in str(e).lower():
+            raise
+        if not verify:
+            raise HTTPException(409, "Zu dieser E-Mail gibt es schon ein Konto. Melde dich an oder setze das Passwort zurück.")
+        # Mit Mail-Bestätigung verraten wir nicht, ob es die Adresse schon gibt: der Inhaber bekommt einen Hinweis
+        try:
+            _mail_limit(req, email)
+            send_mail(email, "Anmeldeversuch bei Meine Finanzen",
+                      "Hallo,\n\njemand wollte mit deiner E-Mail-Adresse ein neues Konto anlegen. Du hast bereits eines.\n"
+                      f"Passwort vergessen? Hier kannst du es zurücksetzen: {_base_url(req)}/#forgot\n\n-- \nMeine Finanzen · Smooth Solutions\n")
+        except Exception:
+            pass
+        return {"ok": True, "verify": True, "email": email}
+    if not verify:
+        with db.tx() as c:
+            c.execute("SELECT fin.auth_mark_verified(%s)", (uid,))
+        _new_session(resp, uid, req)
+        return {"ok": True, "verify": False}
+    try:
+        _mail_link(req, uid, email, name, "verify")
+    except Exception:
+        return {"ok": True, "verify": True, "email": email, "mail_error": True}
+    return {"ok": True, "verify": True, "email": email}
+
+
+@router.post("/verify")
+def verify_email(body: TokenIn, req: Request, resp: Response):
+    tok = body.token.strip()
+    if not tok or len(tok) > 100:
+        raise HTTPException(400, "Der Link ist unvollständig.")
+    with db.tx() as c:
+        uid = c.execute("SELECT fin.auth_verify_email(%s) AS id", (_hash_token(tok),)).fetchone()["id"]
+    if not uid:
+        raise HTTPException(400, "Der Link ist abgelaufen oder wurde schon benutzt. Melde dich an – falls nötig, schicken wir einen neuen.")
     _new_session(resp, uid, req)
     return {"ok": True}
 
 
+@router.post("/verify/resend")
+def verify_resend(body: EmailIn, req: Request):
+    email = body.email.strip().lower()[:200]
+    _mail_limit(req, email)
+    with db.tx() as c:
+        row = c.execute("SELECT * FROM fin.auth_lookup2(%s)", (email,)).fetchone()
+    if row and not row["email_verified"] and settings.mail_ready:
+        try:
+            _mail_link(req, row["id"], email, row["name"], "verify")
+        except Exception:
+            raise HTTPException(502, "Die Mail konnte gerade nicht verschickt werden. Bitte später noch einmal.")
+    return {"ok": True}
+
+
+# ---------- Login ----------
 @router.post("/login")
 def login(body: LoginIn, req: Request, resp: Response):
     email = body.email.strip().lower()[:200]
@@ -200,24 +333,79 @@ def login(body: LoginIn, req: Request, resp: Response):
     if wait:
         raise HTTPException(429, f"Zu viele Fehlversuche. Bitte in {int(wait // 60) + 1} Minuten noch einmal.")
     with db.tx() as c:
-        row = c.execute("SELECT * FROM fin.auth_lookup(%s)", (email,)).fetchone()
-    ok = False
-    try:
-        ok = ph.verify(row["pw_hash"] if row else _DUMMY, body.password[:200]) and row is not None
-    except (VerifyMismatchError, VerificationError, InvalidHashError):
-        ok = False
-    if not ok:
+        row = c.execute("SELECT * FROM fin.auth_lookup2(%s)", (email,)).fetchone()
+    if not _pw_ok(row["pw_hash"] if row else None, body.password):
         fail_by_email.add(email)
         fail_by_ip.add(ip)
         raise HTTPException(401, "E-Mail oder Passwort falsch.")
+    if row["totp_enabled"]:
+        if not body.code.strip():
+            return _need(401, "totp", "Bitte den 6-stelligen Code aus deiner Authenticator-App eingeben.")
+        if not _second_factor(row, body.code):
+            fail_by_email.add(email)
+            fail_by_ip.add(ip)
+            return _need(401, "totp", "Der Code stimmt nicht oder wurde schon benutzt. Bitte den aktuellen Code eingeben.")
+    if not row["email_verified"] and settings.must_verify:
+        return _need(403, "verify", "Bitte bestätige zuerst deine E-Mail-Adresse. Den Link haben wir dir geschickt.")
     fail_by_email.reset(email)
     if ph.check_needs_rehash(row["pw_hash"]):
         with db.tx(row["id"]) as c:
             c.execute("UPDATE fin.users SET pw_hash = %s WHERE id = %s", (ph.hash(body.password), row["id"]))
-    _new_session(resp, row["id"], req)
+    _new_session(resp, row["id"], req, body.remember)
     return {"ok": True}
 
 
+# ---------- Passwort vergessen ----------
+@router.post("/forgot")
+def forgot(body: EmailIn, req: Request):
+    email = body.email.strip().lower()[:200]
+    if not EMAIL_RE.match(email):
+        raise HTTPException(400, "Bitte eine gültige E-Mail-Adresse eingeben.")
+    if not settings.mail_ready:
+        raise HTTPException(503, "Auf diesem Server ist kein Mailversand eingerichtet. Wende dich an den Verwalter.")
+    _mail_limit(req, email)
+    with db.tx() as c:
+        row = c.execute("SELECT * FROM fin.auth_lookup2(%s)", (email,)).fetchone()
+    if row:
+        try:
+            _mail_link(req, row["id"], email, row["name"], "reset")
+        except Exception:
+            raise HTTPException(502, "Die Mail konnte gerade nicht verschickt werden. Bitte später noch einmal.")
+    # immer dieselbe Antwort: verrät nicht, ob es ein Konto gibt
+    return {"ok": True}
+
+
+@router.post("/reset/check")
+def reset_check(body: TokenIn):
+    with db.tx() as c:
+        row = c.execute("SELECT * FROM fin.auth_token_user(%s, 'reset')", (_hash_token(body.token.strip()),)).fetchone()
+    if not row:
+        raise HTTPException(400, "Der Link ist abgelaufen oder wurde schon benutzt. Fordere einfach einen neuen an.")
+    return {"ok": True, "email": row["email"], "totp": row["totp_enabled"]}
+
+
+@router.post("/reset")
+def reset(body: ResetIn, req: Request, resp: Response):
+    th = _hash_token(body.token.strip())
+    with db.tx() as c:
+        row = c.execute("SELECT * FROM fin.auth_token_user(%s, 'reset')", (th,)).fetchone()
+    if not row:
+        raise HTTPException(400, "Der Link ist abgelaufen oder wurde schon benutzt. Fordere einfach einen neuen an.")
+    _check_password(body.password, row["email"])
+    if row["totp_enabled"]:
+        r = dict(row, id=row["user_id"])
+        if not _second_factor(r, body.code):
+            return _need(401, "totp", "Bitte den Code aus deiner Authenticator-App (oder einen Notfall-Code) eingeben.")
+    with db.tx() as c:
+        uid = c.execute("SELECT fin.auth_reset_password(%s, %s) AS id", (th, ph.hash(body.password))).fetchone()["id"]
+    if not uid:
+        raise HTTPException(400, "Der Link ist abgelaufen oder wurde schon benutzt.")
+    fail_by_email.reset(row["email"])
+    _new_session(resp, uid, req)
+    return {"ok": True}
+
+
+# ---------- Angemeldet ----------
 @router.post("/logout")
 def logout(req: Request, resp: Response):
     tok = req.cookies.get(COOKIE)
@@ -237,15 +425,16 @@ def logout_all(resp: Response, u: User = Depends(current_user)):
     return {"ok": True}
 
 
+def _my_row(u: User) -> dict:
+    with db.tx(u.id) as c:
+        return c.execute("SELECT id, pw_hash, totp_enabled, totp_secret, totp_last_step, recovery_codes FROM fin.users WHERE id = %s", (u.id,)).fetchone()
+
+
 @router.post("/password")
 def change_password(body: PasswordIn, req: Request, resp: Response, u: User = Depends(current_user)):
-    with db.tx(u.id) as c:
-        h = c.execute("SELECT pw_hash FROM fin.users WHERE id = %s", (u.id,)).fetchone()["pw_hash"]
-    try:
-        ph.verify(h, body.old[:200])
-    except Exception:
+    if not _pw_ok(_my_row(u)["pw_hash"], body.old):
         raise HTTPException(400, "Das bisherige Passwort stimmt nicht.")
-    _check_password(body.new)
+    _check_password(body.new, u.email)
     with db.tx(u.id) as c:
         c.execute("UPDATE fin.users SET pw_hash = %s WHERE id = %s", (ph.hash(body.new), u.id))
         c.execute("DELETE FROM fin.sessions WHERE user_id = %s", (u.id,))   # alle Geräte abmelden
@@ -274,14 +463,72 @@ def profile(body: ProfileIn, u: User = Depends(current_user)):
     return {"ok": True}
 
 
+# ---------- Zwei-Faktor ----------
+@router.post("/totp/setup")
+def totp_setup(body: PwCodeIn, u: User = Depends(current_user)):
+    row = _my_row(u)
+    if row["totp_enabled"]:
+        raise HTTPException(400, "Zwei-Faktor ist bereits eingeschaltet.")
+    if not _pw_ok(row["pw_hash"], body.password):
+        raise HTTPException(400, "Bitte zur Sicherheit dein Passwort eingeben.")
+    sec = totp.new_secret()
+    with db.tx(u.id) as c:
+        c.execute("UPDATE fin.users SET totp_secret = %s, totp_last_step = 0 WHERE id = %s", (sec, u.id))
+    uri = totp.uri(sec, u.email)
+    return {"ok": True, "secret": sec, "uri": uri, "svg": totp.qr_svg(uri)}
+
+
+@router.post("/totp/enable")
+def totp_enable(body: PwCodeIn, u: User = Depends(current_user)):
+    row = _my_row(u)
+    if row["totp_enabled"] or not row["totp_secret"]:
+        raise HTTPException(400, "Bitte zuerst „Einrichten“ wählen.")
+    step = totp.verify(row["totp_secret"], body.code, 0)
+    if step is None:
+        raise HTTPException(400, "Der Code stimmt nicht. Prüfe, ob die Uhrzeit am Handy stimmt, und nimm den aktuellen Code.")
+    codes = totp.recovery_codes()
+    with db.tx(u.id) as c:
+        c.execute("UPDATE fin.users SET totp_enabled = true, totp_last_step = %s, recovery_codes = %s WHERE id = %s",
+                  (step, [totp.hash_recovery(x) for x in codes], u.id))
+    return {"ok": True, "recovery": codes}
+
+
+@router.post("/totp/disable")
+def totp_disable(body: PwCodeIn, u: User = Depends(current_user)):
+    row = _my_row(u)
+    if not row["totp_enabled"]:
+        return {"ok": True}
+    if not _pw_ok(row["pw_hash"], body.password):
+        raise HTTPException(400, "Das Passwort stimmt nicht.")
+    if not _second_factor(row, body.code):
+        raise HTTPException(400, "Der Code stimmt nicht.")
+    with db.tx(u.id) as c:
+        c.execute("UPDATE fin.users SET totp_enabled = false, totp_secret = NULL, totp_last_step = 0, recovery_codes = '{}' WHERE id = %s", (u.id,))
+    return {"ok": True}
+
+
+@router.post("/totp/recovery")
+def totp_recovery(body: PwCodeIn, u: User = Depends(current_user)):
+    row = _my_row(u)
+    if not row["totp_enabled"]:
+        raise HTTPException(400, "Zwei-Faktor ist nicht eingeschaltet.")
+    if not _pw_ok(row["pw_hash"], body.password):
+        raise HTTPException(400, "Das Passwort stimmt nicht.")
+    codes = totp.recovery_codes()
+    with db.tx(u.id) as c:
+        c.execute("UPDATE fin.users SET recovery_codes = %s WHERE id = %s", ([totp.hash_recovery(x) for x in codes], u.id))
+    return {"ok": True, "recovery": codes}
+
+
+# ---------- Konto löschen ----------
 @router.post("/delete")
 def delete_account(body: DeleteIn, resp: Response, u: User = Depends(current_user)):
+    row = _my_row(u)
+    if not _pw_ok(row["pw_hash"], body.password):
+        raise HTTPException(400, "Passwort falsch. Das Konto bleibt bestehen.")
+    if row["totp_enabled"] and not _second_factor(row, body.code):
+        return _need(400, "totp", "Bitte zusätzlich den Code aus deiner Authenticator-App eingeben.")
     with db.tx(u.id) as c:
-        h = c.execute("SELECT pw_hash FROM fin.users WHERE id = %s", (u.id,)).fetchone()["pw_hash"]
-        try:
-            ph.verify(h, body.password[:200])
-        except Exception:
-            raise HTTPException(400, "Passwort falsch. Das Konto bleibt bestehen.")
         c.execute("DELETE FROM fin.users WHERE id = %s", (u.id,))      # löscht per CASCADE alle Daten
     resp.delete_cookie(COOKIE, path="/")
     return {"ok": True}

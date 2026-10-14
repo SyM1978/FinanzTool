@@ -28,7 +28,7 @@ Python/FastAPI, PostgreSQL 16 mit Row-Level Security, jede Person mit eigenem Lo
 2. **Environment:** den Inhalt von `.env.example` einfügen und die Werte ersetzen.
    - Für Passwörter nur Buchstaben und Ziffern verwenden, z. B. von `openssl rand -hex 24`.
    - Zwingend sind `POSTGRES_PASSWORD` und `APP_DB_PASSWORD`.
-   - Für die Registrierung einen `INVITE_CODE` setzen.
+   - Die SMTP-Werte eintragen. Ohne sie gibt es keine Bestätigungsmails, kein „Passwort vergessen“ und keine Kursalarme.
 3. **Domain:** unter *Domains* eine Domain hinzufügen.
    - Service: **app**, Container-Port: **8000**.
    - HTTPS an, Zertifikat über Let’s Encrypt.
@@ -43,11 +43,26 @@ Python/FastAPI, PostgreSQL 16 mit Row-Level Security, jede Person mit eigenem Lo
    | `alerts` | prüft werktags von 8 bis 22 Uhr alle 15 Minuten die Kursalarme |
    | `backup` | schreibt jede Nacht um 3:15 Uhr eine Sicherung ins Volume `backups` und behält sie 14 Tage |
 
-5. **Erstes Konto:** die Domain öffnen und mit dem Einladungscode das erste Konto anlegen. Es wird Verwalter.
+5. **Erstes Konto:** die Domain öffnen und das erste Konto anlegen. Es wird Verwalter und ist sofort angemeldet.
 
 **Updates:** auf GitHub pushen und in Dokploy **Deploy** drücken, oder *Autodeploy* einschalten. `migrate` läuft bei jedem Deploy und ändert nur, was fehlt. Die Daten bleiben erhalten.
 
 **Hinweis zum Netzwerk:** Ältere Dokploy-Versionen hängen die Traefik-Labels nicht automatisch an. Dann den Dienst `app` zusätzlich ins externe Netzwerk `dokploy-network` hängen, siehe Dokploy-Doku „Docker Compose › Domains“.
+
+### Anmeldung und Konten
+
+| Funktion | So läuft es |
+|---|---|
+| **Registrieren** | Standard `REGISTRATION=open`: Jeder kann sich mit Name, E-Mail und Passwort registrieren. Das Passwort braucht mindestens 10 Zeichen, eine Stärkeanzeige hilft. |
+| **E-Mail bestätigen** | Neue Konten bekommen einen Bestätigungslink, 48 Stunden gültig. Erst danach ist die Anmeldung möglich. Gilt automatisch, sobald SMTP eingetragen ist (`VERIFY_EMAIL=auto`). |
+| **Kein Konto-Raten** | Ist eine Adresse schon registriert, sieht die Antwort gleich aus. Der Inhaber bekommt nur einen Hinweis per Mail. |
+| **Passwort vergessen** | Link per Mail, 60 Minuten gültig, nur einmal nutzbar. Danach sind alle anderen Geräte abgemeldet. |
+| **Zwei-Faktor** | Freiwillig unter *Einstellungen › Benutzerkonto*. QR-Code mit einer Authenticator-App scannen, dazu 10 Notfall-Codes. Ein Code gilt nur einmal. Auch „Passwort vergessen“ verlangt dann den Code. |
+| **Angemeldet bleiben** | Haken an: 30 Tage. Haken aus: bis der Browser geschlossen wird. |
+| **Weitere Funktionen** | Passwort ändern, auf allen Geräten abmelden und das Konto samt allen Daten löschen. |
+| **Bremsen** | 8 Fehlversuche pro Adresse in 15 Minuten. Mails sind begrenzt auf 5 pro Adresse und 8 pro IP-Adresse und Stunde. |
+
+Nur mit Einladung: `REGISTRATION=invite` plus `INVITE_CODE`. Keine neuen Konten mehr: `REGISTRATION=closed`.
 
 ### Sicherung zurückspielen
 
@@ -96,14 +111,16 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 ```bash
 python tests/fake_sources.py & python tests/fake_news2.py & python tests/fake_smtp.py &
 tests/run_server.sh &
-python tests/test_api.py && python tests/test_market.py && python tests/smoke.py && python tests/e2e.py
+PORT=8801 VERIFY_EMAIL=auto APP_URL=http://127.0.0.1:8801 tests/run_server.sh &   # für den Anmelde-Test
+python tests/test_api.py && python tests/test_market.py && python tests/test_auth.py
+python tests/smoke.py && python tests/e2e.py && python tests/e2e_auth.py
 ```
 
 Dabei laufen auch nachgebaute Kursquellen und ein Test-Mailserver.
 
 ## Sicherheit
 
-- **Passwörter:** liegen nur als Argon2id-Hash vor.
+- **Passwörter:** liegen nur als Argon2id-Hash vor. Mail-Links und Notfall-Codes liegen nur als SHA-256 in der Datenbank. Die App-Rolle kann die Token-Tabelle nicht lesen.
 - **Sitzung:** im Cookie mit `HttpOnly`, `Secure` und `SameSite=Strict`. In der Datenbank steht nur ein SHA-256 des Tokens.
 - **Schreibende Aufrufe:** brauchen einen eigenen Header (Schutz vor fremden Seiten, CSRF).
 - **Anmeldung:** wird nach Fehlversuchen gebremst.

@@ -5,7 +5,7 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.1.0",VDATE="2026-10-14";
+var VERSION="1.2.0",VDATE="2026-10-14";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
@@ -23,7 +23,7 @@ function api(method,path,body){
   var h={"X-Requested-With":"finanzen"};if(body!==undefined)h["Content-Type"]="application/json";
   return fetch(path,{method:method,headers:h,body:body!==undefined?JSON.stringify(body):undefined,credentials:"same-origin",cache:"no-store"}).then(function(r){
     return r.json().catch(function(){return {}}).then(function(j){
-      if(!r.ok){var e=new Error(j.detail||("Server antwortet mit HTTP "+r.status));e.status=r.status;if(r.status===401&&path.indexOf("/api/auth/")!==0)sessionLost();throw e}
+      if(!r.ok){var e=new Error(typeof j.detail==="string"?j.detail:("Server antwortet mit HTTP "+r.status));e.status=r.status;e.data=j;if(r.status===401&&path.indexOf("/api/auth/")!==0)sessionLost();throw e}
       return j;
     });
   },function(){var e=new Error("Keine Verbindung zum Server.");e.status=0;throw e});
@@ -196,7 +196,10 @@ document.addEventListener("click",function(e){var b=e.target.closest("[data-go]"
 $("menuBtn").addEventListener("click",function(){setDrawer(!$("side").classList.contains("open"))});
 $("backdrop").addEventListener("click",function(){setDrawer(false)});
 document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("side").classList.contains("open"))setDrawer(false)});
-window.addEventListener("hashchange",function(){var v=location.hash.slice(1);if(D&&VIEWS[v]&&v!==curView)showView(v)});
+window.addEventListener("hashchange",function(){
+  if(/^#(verify|reset)=|^#forgot$/.test(location.hash)&&!$("gate").hidden){handleAuthHash(REG);return}
+  var v=location.hash.slice(1);if(D&&VIEWS[v]&&v!==curView)showView(v);
+});
 
 /* ---------- Abschnitte, Darstellung, Meldungen ---------- */
 var applyingSect=false;
@@ -231,32 +234,148 @@ function renderHead(){
   $("previewBar").hidden=!PREVIEW;
 }
 
-/* ---------- Anmeldung ---------- */
-function gateMode(m){$("gLogin").hidden=m!=="login";$("gReg").hidden=m!=="reg";$("gRegWrap").hidden=m!=="login"||!(REG&&REG.open)}
-function showGate(reg,note){
-  REG=reg||REG;$("boot").hidden=true;$("app").hidden=true;$("gate").hidden=false;applyLook();document.title="Anmelden · Meine Finanzen";
-  $("gNote").hidden=!note;$("gNoteTxt").innerHTML=note||"";
-  if(REG&&REG.first){$("gSub").textContent="Willkommen! Lege das erste Konto an, es wird Verwalter.";gateMode("reg");$("gRCancel").hidden=true}
-  else{$("gSub").textContent="Konten, Finanzplan und Depot an einem Ort.";gateMode("login");$("gRCancel").hidden=false;setTimeout(function(){($("gEmail").value?$("gPw"):$("gEmail")).focus()},0)}
-  $("gRInvWrap").hidden=!(REG&&REG.invite);
+/* ---------- Anmeldung, Registrierung, Passwort vergessen, Zwei-Faktor ---------- */
+var GATE={mode:"login",email:"",pw:"",remember:true,reset:null,resend:""};
+var EMAIL_OK=function(m){return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m)};
+function gateMode(m){
+  GATE.mode=m;
+  ["gLogin","gTotp","gReg","gForgot","gReset","gInfo"].forEach(function(id){$(id).hidden=id!=={login:"gLogin",totp:"gTotp",reg:"gReg",forgot:"gForgot",reset:"gReset",info:"gInfo"}[m]});
+  var tabs=(m==="login"||m==="reg")&&REG&&REG.open&&!REG.first;
+  $("gTabs").hidden=!tabs;
+  $("gTabLogin").setAttribute("aria-selected",m==="login"?"true":"false");$("gTabReg").setAttribute("aria-selected",m==="reg"?"true":"false");
+  $("gForgotLnk").hidden=!(REG&&REG.reset);
+  ["gErr","gTotpErr","gRErr","gFErr","gNErr"].forEach(function(id){$(id).textContent=""});
+  var f={login:$("gEmail").value?"gPw":"gEmail",totp:"gCode",reg:"gRName",forgot:"gFEmail",reset:"gNPw"}[m];
+  if(f)setTimeout(function(){try{$(f).focus()}catch(e){}},0);
 }
-$("gRegBtn").addEventListener("click",function(){gateMode("reg");$("gRErr").textContent="";setTimeout(function(){$("gRName").focus()},0)});
-$("gRCancel").addEventListener("click",function(){gateMode("login")});
+function showGate(reg,note,mode){
+  REG=reg||REG||{open:false};$("boot").hidden=true;$("app").hidden=true;$("gate").hidden=false;applyLook();document.title="Anmelden · Meine Finanzen";
+  $("gNote").hidden=!note;$("gNoteTxt").innerHTML=note||"";
+  $("gSub").textContent=REG.first?"Willkommen! Lege das erste Konto an. Es wird Verwalter dieser Seite.":"Konten, Finanzplan und Depot an einem Ort.";
+  $("gRInvWrap").hidden=!REG.invite;$("gRVerifyHint").hidden=!(REG.verify&&!REG.first);
+  if(REG.min)$("gRPwHint").textContent="Mindestens "+REG.min+" Zeichen. Ein kurzer Satz ist leichter zu merken als Sonderzeichen.";
+  gateMode(mode||(REG.first?"reg":"login"));
+}
+function gateInfo(icon,html,resendEmail){
+  $("gInfoIcon").textContent=icon;$("gInfoTxt").innerHTML=html;$("gInfoMsg").textContent="";
+  GATE.resend=resendEmail||"";$("gResend").hidden=!resendEmail;gateMode("info");
+}
+document.addEventListener("click",function(e){var b=e.target.closest("[data-gm]");if(!b||$("gate").hidden)return;e.preventDefault();var m=b.getAttribute("data-gm");if(m==="forgot")$("gFEmail").value=$("gEmail").value;gateMode(m)});
+/* Passwort anzeigen */
+document.addEventListener("click",function(e){var b=e.target.closest("[data-eye]");if(!b)return;var i=$(b.getAttribute("data-eye")),show=i.type==="password";i.type=show?"text":"password";b.classList.toggle("on",show);b.setAttribute("aria-label",show?"Passwort verbergen":"Passwort anzeigen");b.title=b.getAttribute("aria-label")});
+/* Passwortstärke (grobe Schätzung, nur als Hilfe) */
+function pwScore(p){
+  if(!p)return 0;var s=0,cls=0;
+  [/[a-z]/,/[A-Z]/,/[0-9]/,/[^A-Za-z0-9]/].forEach(function(r){if(r.test(p))cls++});
+  if(p.length>=10)s++;if(p.length>=14)s++;if(p.length>=20)s++;if(cls>=3)s++;
+  if(/^(.)\1+$/.test(p)||/^(123|abc|qwe|pass|geheim|hallo)/i.test(p))s=Math.min(s,1);
+  return Math.max(1,Math.min(4,s));
+}
+function meter(inp,box){
+  var upd=function(){var v=$(inp).value,sc=v?pwScore(v):0,t=["","schwach","geht so","gut","sehr gut"][sc];
+    $(box).setAttribute("data-s",sc);$(box).title=t?"Stärke: "+t:"";
+    Array.prototype.forEach.call($(box).children,function(el,i){el.className=i<sc?"on":""})};
+  $(inp).addEventListener("input",upd);upd();
+}
+meter("gRPw","gRMeter");meter("gNPw","gNMeter");
+function minPw(){return (REG&&REG.min)||10}
+function checkNewPw(p1,p2){
+  if(p1.length<minPw())return "Das Passwort braucht mindestens "+minPw()+" Zeichen.";
+  if(p1!==p2)return "Die beiden Passwörter stimmen nicht überein.";
+  return "";
+}
+function busy(btn,on){$(btn).disabled=on;$(btn).classList.toggle("busy",on)}
+
+/* Anmelden (mit optionalem zweiten Schritt) */
+function doLogin(code){
+  var errId=code!=null?"gTotpErr":"gErr";
+  busy(code!=null?"gTotpGo":"gGo",true);$("gUnverified").hidden=true;
+  return api("POST","/api/auth/login",{email:GATE.email,password:GATE.pw,code:code||"",remember:GATE.remember}).then(function(){
+    GATE.pw="";$("gPw").value="";$("gCode").value="";return afterLogin();
+  }).catch(function(err){
+    var need=err.data&&err.data.need;
+    if(need==="totp"&&code==null){gateMode("totp");return}
+    if(need==="verify"){$("gUnverified").hidden=false;GATE.resend=GATE.email}
+    $(errId).textContent=err.message;
+    if(code!=null){$("gCode").select()}else $("gPw").select();
+  }).then(function(){busy("gGo",false);busy("gTotpGo",false)});
+}
 $("gLogin").addEventListener("submit",function(e){
-  e.preventDefault();var em=$("gEmail").value.trim(),pw=$("gPw").value;
-  if(!em||!pw){$("gErr").textContent="Bitte E-Mail und Passwort eingeben.";return}
-  $("gGo").disabled=true;$("gErr").textContent="";
-  api("POST","/api/auth/login",{email:em,password:pw}).then(function(){$("gPw").value="";return afterLogin()}).catch(function(err){$("gErr").textContent=err.message;$("gPw").select()}).then(function(){$("gGo").disabled=false});
+  e.preventDefault();GATE.email=$("gEmail").value.trim();GATE.pw=$("gPw").value;GATE.remember=$("gRemember").checked;
+  if(!GATE.email||!GATE.pw){$("gErr").textContent="Bitte E-Mail und Passwort eingeben.";return}
+  doLogin(null);
 });
+$("gTotp").addEventListener("submit",function(e){
+  e.preventDefault();var c=$("gCode").value.trim();
+  if(!c){$("gTotpErr").textContent="Bitte den Code eingeben.";return}
+  doLogin(c);
+});
+$("gCode").addEventListener("input",function(){var v=this.value.replace(/\s/g,"");if(/^\d{6}$/.test(v))$("gTotp").requestSubmit?$("gTotp").requestSubmit():doLogin(v)});
+
+/* Registrieren */
 $("gReg").addEventListener("submit",function(e){
   e.preventDefault();var n=$("gRName").value.trim(),em=$("gREmail").value.trim(),p1=$("gRPw").value,p2=$("gRPw2").value,err=$("gRErr");
-  if(!n){err.textContent="Bitte deinen Namen eingeben.";return}
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){err.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";return}
-  if(p1.length<10){err.textContent="Das Passwort braucht mindestens 10 Zeichen.";return}
-  if(p1!==p2){err.textContent="Die beiden Passwörter stimmen nicht überein.";return}
-  $("gRGo").disabled=true;err.textContent="";
-  api("POST","/api/auth/register",{email:em,name:n,password:p1,invite:$("gRInv").value.trim()}).then(function(){$("gRPw").value=$("gRPw2").value="";return afterLogin()}).catch(function(x){err.textContent=x.message}).then(function(){$("gRGo").disabled=false});
+  if(!n){err.textContent="Bitte deinen Namen eingeben.";$("gRName").focus();return}
+  if(!EMAIL_OK(em)){err.textContent="Bitte eine gültige E-Mail-Adresse eingeben.";$("gREmail").focus();return}
+  var bad=checkNewPw(p1,p2);if(bad){err.textContent=bad;return}
+  if(REG.invite&&!$("gRInv").value.trim()){err.textContent="Bitte den Einladungscode eingeben.";$("gRInv").focus();return}
+  busy("gRGo",true);err.textContent="";
+  api("POST","/api/auth/register",{email:em,name:n,password:p1,invite:$("gRInv").value.trim()}).then(function(j){
+    $("gRPw").value=$("gRPw2").value="";$("gRPw").dispatchEvent(new Event("input"));
+    if(j.verify){
+      $("gEmail").value=em;
+      gateInfo("✉","<b>Fast geschafft!</b><br>Wir haben dir eine Mail an <b>"+esc(j.email||em)+"</b> geschickt. Klick auf den Link darin, um dein Konto zu bestätigen. Danach bist du direkt angemeldet."+(j.mail_error?"<br><br><span class=\"neg\">Die Mail konnte gerade nicht verschickt werden. Versuch es gleich noch einmal mit „Link erneut senden“.</span>":"")+"<br><br><small>Nichts angekommen? Schau auch im Spam-Ordner nach.</small>",em);
+      return;
+    }
+    return afterLogin();
+  }).catch(function(x){err.textContent=x.message}).then(function(){busy("gRGo",false)});
 });
+function resend(email,msgId){
+  return api("POST","/api/auth/verify/resend",{email:email}).then(function(){setMsg(msgId,"Neuer Link ist unterwegs. Er gilt 48 Stunden.")}).catch(function(x){setMsg(msgId,x.message,true)});
+}
+$("gResend").addEventListener("click",function(){resend(GATE.resend,"gInfoMsg")});
+$("gResend2").addEventListener("click",function(){resend(GATE.resend||$("gEmail").value.trim(),"gErr")});
+
+/* Passwort vergessen */
+$("gForgot").addEventListener("submit",function(e){
+  e.preventDefault();var em=$("gFEmail").value.trim();
+  if(!EMAIL_OK(em)){$("gFErr").textContent="Bitte eine gültige E-Mail-Adresse eingeben.";return}
+  busy("gFGo",true);
+  api("POST","/api/auth/forgot",{email:em}).then(function(){
+    gateInfo("✉","<b>Schau in dein Postfach.</b><br>Wenn es zu <b>"+esc(em)+"</b> ein Konto gibt, ist ein Link zum Zurücksetzen unterwegs. Er gilt 60 Minuten.<br><br><small>Nichts angekommen? Spam-Ordner prüfen oder in ein paar Minuten noch einmal anfordern.</small>");
+  }).catch(function(x){$("gFErr").textContent=x.message}).then(function(){busy("gFGo",false)});
+});
+
+/* Neues Passwort aus dem Mail-Link */
+$("gReset").addEventListener("submit",function(e){
+  e.preventDefault();var p1=$("gNPw").value,p2=$("gNPw2").value,bad=checkNewPw(p1,p2);
+  if(bad){$("gNErr").textContent=bad;return}
+  if(!$("gNCodeWrap").hidden&&!$("gNCode").value.trim()){$("gNErr").textContent="Bitte den Code aus der Authenticator-App eingeben.";$("gNCode").focus();return}
+  busy("gNGo",true);
+  api("POST","/api/auth/reset",{token:GATE.reset,password:p1,code:$("gNCode").value.trim()}).then(function(){
+    GATE.reset=null;$("gNPw").value=$("gNPw2").value=$("gNCode").value="";return afterLogin();
+  }).catch(function(x){if(x.data&&x.data.need==="totp")$("gNCodeWrap").hidden=false;$("gNErr").textContent=x.message}).then(function(){busy("gNGo",false)});
+});
+
+/* Links aus Mails: #verify=…, #reset=…, #forgot */
+function handleAuthHash(reg){
+  var h=location.hash.slice(1),m=/^(verify|reset)=([A-Za-z0-9_\-]{20,100})$/.exec(h);
+  if(!m&&h!=="forgot")return false;
+  try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+  if(h==="forgot"){showGate(reg,null,"forgot");return true}
+  if(m[1]==="verify"){
+    showGate(reg,null,"info");gateInfo("⏳","E-Mail-Adresse wird bestätigt …");$("gInfoBack").hidden=true;
+    api("POST","/api/auth/verify",{token:m[2]}).then(function(){$("gInfoBack").hidden=false;return afterLogin()}).catch(function(x){
+      $("gInfoBack").hidden=false;gateInfo("⚠","<b>Bestätigung nicht möglich.</b><br>"+esc(x.message));
+    });
+    return true;
+  }
+  showGate(reg,null,"info");gateInfo("⏳","Link wird geprüft …");
+  api("POST","/api/auth/reset/check",{token:m[2]}).then(function(j){
+    GATE.reset=m[2];$("gResetMail").textContent=j.email;$("gNCodeWrap").hidden=!j.totp;gateMode("reset");
+  }).catch(function(x){gateInfo("⚠","<b>Link ungültig.</b><br>"+esc(x.message)+'<br><br><button class="btn" type="button" data-gm="forgot">Neuen Link anfordern</button>')});
+  return true;
+}
 function setUser(u){USER=u;P.name=u.name;P.email=u.email;P.id=u.id}
 function refreshMe(){return api("GET","/api/auth/me").then(function(j){if(j.user)setUser(j.user);return j.user})}
 function afterLogin(){
@@ -269,7 +388,7 @@ function afterLogin(){
 }
 function sessionLost(){
   if(SYNC.lost||!D)return;SYNC.lost=true;
-  showGate({open:false,first:false,invite:false},"<b>Sitzung abgelaufen.</b> Bitte neu anmelden. Nicht gespeicherte Änderungen bleiben erhalten.");
+  showGate(Object.assign({},REG||{},{open:false,first:false,invite:false}),"<b>Sitzung abgelaufen.</b> Bitte neu anmelden. Nicht gespeicherte Änderungen bleiben erhalten.","login");
   $("gEmail").value=P.email;
 }
 function logout(all){
@@ -311,6 +430,7 @@ function renderShellSettings(){
   $("setCompact").checked=!!D.settings.compact;
   Array.prototype.forEach.call(document.querySelectorAll('input[name="scheme"]'),function(r){r.checked=r.value===(D.settings.scheme||"smooth")});
   var n=D.accounts.length+" Konten, "+D.tx.length+" Buchungen, "+D.pos.length+" Positionen";$("dataMeta").textContent=n;
+  renderTfa();
 }
 $("uName").addEventListener("change",function(){var v=this.value.trim();if(!v){this.value=P.name;return}api("POST","/api/auth/profile",{name:v}).then(function(){P.name=v;USER.name=v;renderAll();setMsg("userMsg","Name gespeichert.")}).catch(function(e){setMsg("userMsg",e.message,true)})});
 $("uPwSave").addEventListener("click",function(){
@@ -323,7 +443,51 @@ $("uPwSave").addEventListener("click",function(){
 $("uLogoutAll").addEventListener("click",function(){var b=this;armed(b,"Wirklich überall abmelden?",function(){logout(true)})});
 $("uLogout").addEventListener("click",function(){logout(false)});
 $("delAcc").addEventListener("click",function(){var b=this,pw=$("delPw").value;if(!pw){setMsg("delMsg","Bitte zur Bestätigung dein Passwort eingeben.",true);return}
-  armed(b,"Endgültig löschen? Das geht nicht rückgängig.",function(){api("POST","/api/auth/delete",{password:pw}).then(function(){D=null;location.hash="";location.reload()}).catch(function(e){setMsg("delMsg",e.message,true)})})});
+  if(USER.totp&&!$("delCode").value.trim()){setMsg("delMsg","Bitte zusätzlich den Code aus der Authenticator-App eingeben.",true);return}
+  armed(b,"Endgültig löschen? Das geht nicht rückgängig.",function(){api("POST","/api/auth/delete",{password:pw,code:$("delCode").value.trim()}).then(function(){D=null;location.hash="";location.reload()}).catch(function(e){setMsg("delMsg",e.message,true)})})});
+
+
+/* ---------- Zwei-Faktor einrichten ---------- */
+var TFA={setup:false,codes:null};
+function renderTfa(){
+  var on=!!USER.totp;
+  $("tfaState").textContent=on?"an":"aus";$("tfaState").className="tfastate"+(on?" on":"");
+  $("tfaIntro").hidden=on;$("tfaStart").hidden=on||TFA.setup||!!TFA.codes;$("tfaSetupBox").hidden=!TFA.setup;
+  $("tfaCodesBox").hidden=!TFA.codes;$("tfaOn").hidden=!on||!!TFA.codes;
+  $("delCodeWrap").hidden=!on;
+  if(on&&!TFA.codes&&USER.recovery_left!=null)$("tfaState").textContent="an · "+USER.recovery_left+" Notfall-Codes übrig";
+}
+$("tfaSetup").addEventListener("click",function(){
+  var pw=$("tfaPw").value;if(!pw){setMsg("tfaMsg","Bitte zur Sicherheit dein Passwort eingeben.",true);$("tfaPw").focus();return}
+  api("POST","/api/auth/totp/setup",{password:pw}).then(function(j){
+    $("tfaPw").value="";TFA.setup=true;$("tfaQr").innerHTML=j.svg;$("tfaKey").textContent=j.secret.replace(/(.{4})/g,"$1 ").trim();
+    setMsg("tfaMsg","");renderTfa();setTimeout(function(){$("tfaCode").focus()},0);
+  }).catch(function(e){setMsg("tfaMsg",e.message,true)});
+});
+$("tfaCancel").addEventListener("click",function(){TFA.setup=false;$("tfaQr").innerHTML="";renderTfa();setMsg("tfaMsg","")});
+$("tfaEnable").addEventListener("click",function(){
+  var c=$("tfaCode").value.replace(/\s/g,"");if(!/^\d{6}$/.test(c)){setMsg("tfaMsg","Bitte den 6-stelligen Code aus der App eingeben.",true);return}
+  api("POST","/api/auth/totp/enable",{code:c}).then(function(j){
+    TFA.setup=false;TFA.codes=j.recovery;$("tfaCode").value="";$("tfaQr").innerHTML="";showCodes();
+    return refreshMe();
+  }).then(function(){renderTfa();setMsg("tfaMsg","Zwei-Faktor ist eingeschaltet. Ab jetzt fragt die Anmeldung nach dem Code.")}).catch(function(e){setMsg("tfaMsg",e.message,true)});
+});
+function showCodes(){$("tfaCodes").innerHTML=TFA.codes.map(function(c){return "<li><code>"+esc(c)+"</code></li>"}).join("")}
+function codesText(){return "Meine Finanzen – Notfall-Codes für "+P.email+"\nErstellt am "+new Date().toLocaleDateString("de-DE")+". Jeder Code funktioniert genau einmal.\n\n"+TFA.codes.join("\n")+"\n"}
+$("tfaCodesDl").addEventListener("click",function(){if(!download("Meine_Finanzen_Notfall-Codes.txt",codesText(),"text/plain"))setMsg("tfaMsg","Download hier nicht möglich. Bitte die Codes abschreiben oder kopieren.",true)});
+$("tfaCodesCopy").addEventListener("click",function(){try{navigator.clipboard.writeText(codesText()).then(function(){setMsg("tfaMsg","Kopiert.")},function(){setMsg("tfaMsg","Kopieren nicht möglich.",true)})}catch(e){setMsg("tfaMsg","Kopieren nicht möglich.",true)}});
+$("tfaCodesDone").addEventListener("click",function(){TFA.codes=null;$("tfaCodes").innerHTML="";renderTfa();setMsg("tfaMsg","")});
+$("tfaNewCodes").addEventListener("click",function(){
+  var pw=$("tfaOffPw").value;if(!pw){setMsg("tfaMsg","Bitte dein Passwort eingeben.",true);$("tfaOffPw").focus();return}
+  api("POST","/api/auth/totp/recovery",{password:pw}).then(function(j){$("tfaOffPw").value="";TFA.codes=j.recovery;showCodes();return refreshMe()}).then(function(){renderTfa();setMsg("tfaMsg","Neue Notfall-Codes erstellt. Die alten gelten nicht mehr.")}).catch(function(e){setMsg("tfaMsg",e.message,true)});
+});
+$("tfaOff").addEventListener("click",function(){
+  var b=this,pw=$("tfaOffPw").value,c=$("tfaOffCode").value.trim();
+  if(!pw||!c){setMsg("tfaMsg","Zum Ausschalten bitte Passwort und Code eingeben.",true);return}
+  armed(b,"Wirklich ausschalten?",function(){
+    api("POST","/api/auth/totp/disable",{password:pw,code:c}).then(function(){$("tfaOffPw").value=$("tfaOffCode").value="";return refreshMe()}).then(function(){renderTfa();setMsg("tfaMsg","Zwei-Faktor ist ausgeschaltet.")}).catch(function(e){setMsg("tfaMsg",e.message,true)});
+  });
+});
 
 /* Export */
 $("xAll").addEventListener("click",function(){
@@ -396,8 +560,10 @@ function boot(){
   setInterval(pollRev,60000);
   if(PREVIEW){setUser({id:"preview",name:"Vorschau",email:"vorschau@example.de",alert_mail:false,alert_email:"",mail_ready:false});applyServer({rev:0,settings:{}},true);return}
   api("GET","/api/auth/me").then(function(j){
-    if(j.user){setUser(j.user);return loadData(true)}
-    showGate(j.registration);
+    if(j.user&&!/^#(verify|reset)=/.test(location.hash)){setUser(j.user);return loadData(true)}
+    var reg=j.registration||{open:false,reset:false};
+    if(handleAuthHash(reg))return;
+    showGate(reg);
   }).catch(function(e){$("bootMsg").textContent="Server nicht erreichbar: "+e.message+" Bitte später neu laden."});
 }
 

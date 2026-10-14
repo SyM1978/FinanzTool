@@ -3,7 +3,8 @@
 
 x-app-env: &app-env
   DATABASE_URL: postgresql://finanzen_app:${APP_DB_PASSWORD:?APP_DB_PASSWORD fehlt}@db:5432/finanzen
-  REGISTRATION: ${REGISTRATION:-invite}
+  REGISTRATION: ${REGISTRATION:-open}
+  VERIFY_EMAIL: ${VERIFY_EMAIL:-auto}
   INVITE_CODE: ${INVITE_CODE:-}
   MIN_PASSWORD: ${MIN_PASSWORD:-10}
   SESSION_DAYS: ${SESSION_DAYS:-30}

@@ -29,6 +29,35 @@
       </div>
       <p class="msg" id="userMsg" aria-live="polite"></p>
       <hr class="sep">
+      <div class="tfa" id="tfa">
+        <div class="tfahead"><span class="flabel">Zwei-Faktor-Anmeldung</span><span class="tfastate" id="tfaState"></span></div>
+        <p class="hint" id="tfaIntro">Zusätzlich zum Passwort fragt die Anmeldung nach einem Code aus einer Authenticator-App auf deinem Handy (z. B. Google Authenticator, Microsoft Authenticator, 2FAS, Aegis). Wer nur dein Passwort kennt, kommt dann nicht hinein.</p>
+        <div class="row2" id="tfaStart"><input type="password" id="tfaPw" autocomplete="current-password" placeholder="Passwort zur Bestätigung" aria-label="Passwort zur Bestätigung"><button class="btn" id="tfaSetup" type="button">Einrichten</button></div>
+        <div class="tfasetup" id="tfaSetupBox" hidden>
+          <ol class="tfasteps">
+            <li>Authenticator-App öffnen und diesen QR-Code scannen:</li>
+          </ol>
+          <div class="tfaqr" id="tfaQr"></div>
+          <p class="hint">Scannen geht nicht? Schlüssel von Hand eingeben: <code class="tfakey" id="tfaKey"></code></p>
+          <ol class="tfasteps" start="2"><li>Den 6-stelligen Code aus der App eingeben:</li></ol>
+          <div class="row2"><input type="text" id="tfaCode" class="codein" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456" aria-label="Code aus der App"><button class="btn primary" id="tfaEnable" type="button">Einschalten</button></div>
+          <button class="btn ghost" id="tfaCancel" type="button">Abbrechen</button>
+        </div>
+        <div class="tfacodes" id="tfaCodesBox" hidden>
+          <p><b>Deine Notfall-Codes.</b> Jeder funktioniert genau einmal, falls du dein Handy nicht hast. Bewahre sie sicher auf, z. B. ausgedruckt oder im Passwort-Manager. Sie werden nur jetzt angezeigt.</p>
+          <ul class="codelist" id="tfaCodes"></ul>
+          <div class="row"><button class="btn" id="tfaCodesDl" type="button">Herunterladen</button><button class="btn" id="tfaCodesCopy" type="button">Kopieren</button><button class="btn primary" id="tfaCodesDone" type="button">Habe ich gesichert</button></div>
+        </div>
+        <div id="tfaOn" hidden>
+          <div class="form">
+            <div class="field"><label for="tfaOffPw">Passwort</label><input type="password" id="tfaOffPw" autocomplete="current-password"></div>
+            <div class="field"><label for="tfaOffCode">Code oder Notfall-Code</label><input type="text" id="tfaOffCode" class="codein" inputmode="numeric" autocomplete="one-time-code" maxlength="11"></div>
+          </div>
+          <div class="row"><button class="btn" id="tfaNewCodes" type="button">Neue Notfall-Codes</button><button class="btn danger" id="tfaOff" type="button">Zwei-Faktor ausschalten</button></div>
+        </div>
+        <p class="msg" id="tfaMsg" aria-live="polite"></p>
+      </div>
+      <hr class="sep">
       <div class="form">
         <div class="field span2">
           <span class="flabel" id="schemeLbl">Farbschema</span>
@@ -104,12 +133,13 @@
       <hr class="sep">
       <div class="form">
         <div class="field"><label for="delPw">Benutzerkonto löschen</label><input type="password" id="delPw" autocomplete="current-password" placeholder="Passwort zur Bestätigung"></div>
+        <div class="field" id="delCodeWrap" hidden><label for="delCode">Code aus der Authenticator-App</label><input type="text" id="delCode" class="codein" inputmode="numeric" autocomplete="one-time-code" maxlength="11"></div>
       </div>
       <div class="row"><button class="btn danger" id="delAcc" type="button">Konto und alle Daten löschen</button></div>
       <p class="msg" id="delMsg" aria-live="polite"></p>
       <div class="privacy">
         <p><b>Wo liegen die Daten?</b> In der PostgreSQL-Datenbank auf deinem Server, in Tabellen. Jede Person sieht nur ihre eigenen Daten, das erzwingt die Datenbank selbst (Row-Level Security).</p>
-        <p><b>Verbindung:</b> Nur über HTTPS. Das Passwort liegt nur als Argon2-Hash vor, die Sitzung in einem geschützten Cookie.</p>
+        <p><b>Verbindung:</b> Nur über HTTPS. Das Passwort liegt nur als Argon2-Hash vor, die Sitzung in einem geschützten Cookie. Mit Zwei-Faktor-Anmeldung braucht es zusätzlich dein Handy.</p>
         <p><b>Sicherung:</b> Der Server sichert die Datenbank jede Nacht (siehe Anleitung). Zusätzlich kannst du oben jederzeit alles exportieren.</p>
         <p><b>Version:</b> Meine Finanzen <span class="appverlong"></span></p>
       </div>

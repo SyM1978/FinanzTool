@@ -22,9 +22,11 @@ class Settings:
         self.cookie_secure = _bool("COOKIE_SECURE", True)       # nur für Tests ohne HTTPS auf 0
         self.session_days = int(e("SESSION_DAYS", "30"))
         # invite = nur mit Einladungscode, open = jeder, closed = niemand (nur der erste Nutzer)
-        self.registration = e("REGISTRATION", "invite").strip().lower()
+        self.registration = e("REGISTRATION", "open").strip().lower()
         self.invite_code = e("INVITE_CODE", "")
         self.min_password = int(e("MIN_PASSWORD", "10"))
+        # E-Mail-Bestätigung: auto = Pflicht, sobald SMTP eingerichtet ist; 1 = immer; 0 = nie
+        self.verify_email = e("VERIFY_EMAIL", "auto").strip().lower()
 
         # Webseite
         self.web_dir = Path(e("WEB_DIR", str(Path(__file__).resolve().parent.parent.parent / "web" / "out")))
@@ -50,6 +52,14 @@ class Settings:
     @property
     def mail_ready(self) -> bool:
         return bool(self.smtp_host and self.mail_from)
+
+    @property
+    def must_verify(self) -> bool:
+        if self.verify_email in ("1", "true", "ja", "yes", "on"):
+            return True
+        if self.verify_email in ("0", "false", "nein", "no", "off"):
+            return False
+        return self.mail_ready
 
 
 settings = Settings()

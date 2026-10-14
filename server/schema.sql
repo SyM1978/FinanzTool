@@ -333,10 +333,106 @@ REVOKE ALL ON FUNCTION fin.auth_lookup(text), fin.auth_register(text, text, text
 GRANT EXECUTE ON FUNCTION fin.auth_lookup(text), fin.auth_register(text, text, text), fin.auth_user_count(),
   fin.auth_session_create(bytea, uuid, int, text), fin.auth_session_user(bytea), fin.alert_users() TO finanzen_app;
 
+-- ---------------------------------------------------------------------
+-- Version 2: E-Mail-Bestätigung, Passwort zurücksetzen, Zwei-Faktor (TOTP)
+-- ---------------------------------------------------------------------
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret    text;              -- Base32, erst aktiv mit totp_enabled
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled   boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step bigint  NOT NULL DEFAULT 0;   -- gegen doppelt benutzte Codes
+ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_codes text[]  NOT NULL DEFAULT '{}'; -- SHA-256 der Notfall-Codes
+GRANT UPDATE (totp_secret, totp_enabled, totp_last_step, recovery_codes) ON users TO finanzen_app;
+-- Wer schon vor Version 2 ein Konto hatte, gilt als bestätigt
+DO $$ BEGIN
+  IF to_regclass('fin.meta') IS NOT NULL AND EXISTS (SELECT 1 FROM fin.meta WHERE key = 'schema_version' AND value = '1') THEN
+    UPDATE fin.users SET email_verified = true WHERE NOT email_verified;
+  END IF;
+END $$;
+
+-- Einmal-Links per Mail (nur der SHA-256 des Tokens wird gespeichert)
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  token_hash   bytea PRIMARY KEY,
+  user_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind         text NOT NULL CHECK (kind IN ('verify','reset')),
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  expires_at   timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS auth_tokens_user ON auth_tokens(user_id);
+ALTER TABLE auth_tokens ENABLE ROW LEVEL SECURITY;   -- kein Zugriff für die App, nur über Funktionen
+
+CREATE OR REPLACE FUNCTION fin.auth_lookup2(p_email text)
+RETURNS TABLE (id uuid, pw_hash text, name text, email_verified boolean, totp_enabled boolean, totp_secret text,
+               totp_last_step bigint, recovery_codes text[])
+LANGUAGE sql SECURITY DEFINER SET search_path = fin, public AS
+$$ SELECT u.id, u.pw_hash, u.name, u.email_verified, u.totp_enabled, u.totp_secret, u.totp_last_step, u.recovery_codes
+   FROM fin.users u WHERE u.email = p_email::citext $$;
+
+-- nach erfolgreicher Zwei-Faktor-Prüfung vor dem Login: Schritt merken bzw. Notfall-Code verbrauchen
+CREATE OR REPLACE FUNCTION fin.auth_totp_used(p_user uuid, p_step bigint, p_recovery text)
+RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = fin, public AS $$
+BEGIN
+  IF p_recovery IS NOT NULL THEN
+    UPDATE fin.users SET recovery_codes = array_remove(recovery_codes, p_recovery)
+     WHERE id = p_user AND p_recovery = ANY(recovery_codes);
+    RETURN FOUND;
+  END IF;
+  UPDATE fin.users SET totp_last_step = p_step WHERE id = p_user AND totp_last_step < p_step;
+  RETURN FOUND;
+END $$;
+
+CREATE OR REPLACE FUNCTION fin.auth_token_create(p_user uuid, p_kind text, p_hash bytea, p_minutes int)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = fin, public AS $$
+  DELETE FROM fin.auth_tokens WHERE expires_at < now() OR (user_id = p_user AND kind = p_kind);
+  INSERT INTO fin.auth_tokens(token_hash, user_id, kind, expires_at) VALUES (p_hash, p_user, p_kind, now() + make_interval(mins => p_minutes));
+$$;
+
+-- prüft ein Token, ohne es zu verbrauchen
+CREATE OR REPLACE FUNCTION fin.auth_token_user(p_hash bytea, p_kind text)
+RETURNS TABLE (user_id uuid, email text, name text, totp_enabled boolean, totp_secret text, totp_last_step bigint, recovery_codes text[])
+LANGUAGE sql SECURITY DEFINER SET search_path = fin, public AS $$
+  SELECT u.id, u.email::text, u.name, u.totp_enabled, u.totp_secret, u.totp_last_step, u.recovery_codes
+  FROM fin.auth_tokens t JOIN fin.users u ON u.id = t.user_id
+  WHERE t.token_hash = p_hash AND t.kind = p_kind AND t.expires_at > now()
+$$;
+
+-- E-Mail bestätigen (Token wird verbraucht)
+CREATE OR REPLACE FUNCTION fin.auth_verify_email(p_hash bytea)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = fin, public AS $$
+DECLARE v uuid;
+BEGIN
+  DELETE FROM fin.auth_tokens WHERE token_hash = p_hash AND kind = 'verify' AND expires_at > now() RETURNING user_id INTO v;
+  IF v IS NOT NULL THEN UPDATE fin.users SET email_verified = true WHERE id = v; END IF;
+  RETURN v;
+END $$;
+
+-- Passwort über Mail-Link setzen: Token verbrauchen, alle Sitzungen beenden, Adresse gilt als bestätigt
+CREATE OR REPLACE FUNCTION fin.auth_reset_password(p_hash bytea, p_pw text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = fin, public AS $$
+DECLARE v uuid;
+BEGIN
+  DELETE FROM fin.auth_tokens WHERE token_hash = p_hash AND kind = 'reset' AND expires_at > now() RETURNING user_id INTO v;
+  IF v IS NOT NULL THEN
+    UPDATE fin.users SET pw_hash = p_pw, email_verified = true WHERE id = v;
+    DELETE FROM fin.sessions WHERE user_id = v;
+    DELETE FROM fin.auth_tokens WHERE user_id = v AND kind = 'reset';
+  END IF;
+  RETURN v;
+END $$;
+
+CREATE OR REPLACE FUNCTION fin.auth_mark_verified(p_user uuid)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = fin, public AS $$
+  UPDATE fin.users SET email_verified = true WHERE id = p_user;
+$$;
+
+REVOKE ALL ON FUNCTION fin.auth_lookup2(text), fin.auth_totp_used(uuid, bigint, text), fin.auth_token_create(uuid, text, bytea, int),
+  fin.auth_token_user(bytea, text), fin.auth_verify_email(bytea), fin.auth_reset_password(bytea, text), fin.auth_mark_verified(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION fin.auth_lookup2(text), fin.auth_totp_used(uuid, bigint, text), fin.auth_token_create(uuid, text, bytea, int),
+  fin.auth_token_user(bytea, text), fin.auth_verify_email(bytea), fin.auth_reset_password(bytea, text), fin.auth_mark_verified(uuid) TO finanzen_app;
+
 RESET ROLE;
 
 -- Schemaversion (für spätere Migrationen)
 CREATE TABLE IF NOT EXISTS fin.meta (key text PRIMARY KEY, value text NOT NULL);
 ALTER TABLE fin.meta OWNER TO finanzen_owner;
-INSERT INTO fin.meta VALUES ('schema_version', '1') ON CONFLICT (key) DO NOTHING;
+INSERT INTO fin.meta VALUES ('schema_version', '2') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 GRANT SELECT ON fin.meta TO finanzen_app;

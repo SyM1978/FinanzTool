@@ -53,7 +53,7 @@ with sync_playwright() as p:
     assert not errs, errs
     # Andere Person sieht nichts
     ctx2 = b.new_context(bypass_csp=True); pg3 = page(ctx2); pg3.goto(U); pg3.wait_for_selector("#gLogin:not([hidden])")
-    pg3.click("#gRegBtn"); pg3.fill("#gRName", "Petra"); pg3.fill("#gREmail", "petra@example.de"); pg3.fill("#gRPw", "geheim12345"); pg3.fill("#gRPw2", "geheim12345")
+    pg3.click("#gTabReg"); pg3.fill("#gRName", "Petra"); pg3.fill("#gREmail", "petra@example.de"); pg3.fill("#gRPw", "geheim12345"); pg3.fill("#gRPw2", "geheim12345")
     pg3.click("#gRGo"); pg3.wait_for_selector("#app:not([hidden])"); settle(pg3)
     print("Petra sieht:", pg3.evaluate("[SH._D().accounts.length,SH._D().pos.length]")); assert pg3.evaluate("SH._D().accounts.length+SH._D().pos.length") == 0
     assert not errs, errs

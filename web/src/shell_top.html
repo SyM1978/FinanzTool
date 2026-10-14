@@ -2,33 +2,80 @@
 <div class="boot" id="boot"><img src="%%LOGO_HEAD%%" alt="" width="48" height="48"><span id="bootMsg">Meine Finanzen wird geladen …</span></div>
 <div class="gate" id="gate" hidden>
   <div class="gatecard">
-    <div style="display:flex;flex-direction:column;gap:14px;text-align:center">
+    <div class="ghead">
       <img class="logotile" src="%%LOGO_FULL%%" alt="Smooth Solutions" width="403" height="424">
       <div><h1>Meine Finanzen</h1><p class="sub" id="gSub">Konten, Finanzplan und Depot an einem Ort.</p></div>
     </div>
     <div class="banner" id="gNote" hidden><span id="gNoteTxt"></span></div>
 
+    <div class="gtabs" id="gTabs" role="tablist" aria-label="Anmelden oder registrieren">
+      <button type="button" role="tab" id="gTabLogin" data-gm="login" aria-selected="true">Anmelden</button>
+      <button type="button" role="tab" id="gTabReg" data-gm="reg" aria-selected="false">Registrieren</button>
+    </div>
+
+    <!-- Anmelden -->
     <form class="gform" id="gLogin" novalidate>
-      <div class="field"><label for="gEmail">E-Mail</label><input type="email" id="gEmail" autocomplete="username" inputmode="email"></div>
-      <div class="field"><label for="gPw">Passwort</label><input type="password" id="gPw" autocomplete="current-password"></div>
-      <p class="msg bad" id="gErr" aria-live="assertive" style="text-align:center"></p>
-      <div class="center"><button class="btn primary" type="submit" id="gGo">Anmelden</button></div>
+      <div class="field"><label for="gEmail">E-Mail</label><input type="email" id="gEmail" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="gPw">Passwort</label><div class="pwbox"><input type="password" id="gPw" autocomplete="current-password"><button type="button" class="pweye" data-eye="gPw" aria-label="Passwort anzeigen" title="Passwort anzeigen"></button></div></div>
+      <div class="grow"><label class="check"><input type="checkbox" id="gRemember" checked> Angemeldet bleiben</label><button type="button" class="linkbtn" data-gm="forgot" id="gForgotLnk">Passwort vergessen?</button></div>
+      <p class="msg bad" id="gErr" aria-live="assertive"></p>
+      <div class="banner" id="gUnverified" hidden><span>Noch nicht bestätigt? <button type="button" class="linkbtn" id="gResend2">Bestätigungslink erneut senden</button></span></div>
+      <button class="btn primary wide" type="submit" id="gGo">Anmelden</button>
     </form>
 
+    <!-- Zweiter Faktor -->
+    <form class="gform" id="gTotp" hidden novalidate>
+      <p class="gtext"><b>Zwei-Faktor-Anmeldung</b><br>Gib den 6-stelligen Code aus deiner Authenticator-App ein.</p>
+      <div class="field"><label for="gCode">Code</label><input type="text" id="gCode" class="codein" inputmode="numeric" autocomplete="one-time-code" maxlength="11" placeholder="123 456"></div>
+      <p class="hint">Handy nicht zur Hand? Einen deiner Notfall-Codes eingeben (z. B. abcde-12345).</p>
+      <p class="msg bad" id="gTotpErr" aria-live="assertive"></p>
+      <button class="btn primary wide" type="submit" id="gTotpGo">Bestätigen</button>
+      <div class="center"><button class="btn ghost" type="button" data-gm="login">Zurück</button></div>
+    </form>
+
+    <!-- Registrieren -->
     <form class="gform" id="gReg" hidden novalidate>
       <div class="field"><label for="gRName">Dein Name</label><input type="text" id="gRName" maxlength="40" autocomplete="name" placeholder="z. B. Markus"></div>
-      <div class="field"><label for="gREmail">E-Mail</label><input type="email" id="gREmail" autocomplete="username" inputmode="email"></div>
-      <div class="field"><label for="gRPw">Passwort</label><input type="password" id="gRPw" autocomplete="new-password"><span class="hint" id="gRPwHint">Mindestens 10 Zeichen. Ein Satz ist leichter zu merken als Sonderzeichen.</span></div>
+      <div class="field"><label for="gREmail">E-Mail</label><input type="email" id="gREmail" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="gRPw">Passwort</label><div class="pwbox"><input type="password" id="gRPw" autocomplete="new-password" aria-describedby="gRPwHint"><button type="button" class="pweye" data-eye="gRPw" aria-label="Passwort anzeigen" title="Passwort anzeigen"></button></div>
+        <div class="pwmeter" id="gRMeter" aria-hidden="true"><i></i><i></i><i></i><i></i></div><span class="hint" id="gRPwHint">Mindestens 10 Zeichen. Ein kurzer Satz ist leichter zu merken als Sonderzeichen.</span></div>
       <div class="field"><label for="gRPw2">Passwort wiederholen</label><input type="password" id="gRPw2" autocomplete="new-password"></div>
-      <div class="field" id="gRInvWrap" hidden><label for="gRInv">Einladungscode</label><input type="text" id="gRInv" autocomplete="off"><span class="hint">Steht in der Server-Einstellung INVITE_CODE.</span></div>
+      <div class="field" id="gRInvWrap" hidden><label for="gRInv">Einladungscode</label><input type="text" id="gRInv" autocomplete="off"><span class="hint">Den Code bekommst du vom Verwalter dieser Seite.</span></div>
+      <p class="hint" id="gRVerifyHint" hidden>Nach dem Absenden bekommst du eine Mail mit einem Bestätigungslink.</p>
       <p class="msg bad" id="gRErr" aria-live="assertive"></p>
-      <div class="row">
-        <button class="btn primary" type="submit" id="gRGo">Konto anlegen</button>
-        <button class="btn ghost" type="button" id="gRCancel">Zur Anmeldung</button>
-      </div>
+      <button class="btn primary wide" type="submit" id="gRGo">Konto anlegen</button>
     </form>
 
-    <div class="center" id="gRegWrap" hidden><button class="btn" id="gRegBtn" type="button">Neues Konto anlegen</button></div>
+    <!-- Passwort vergessen -->
+    <form class="gform" id="gForgot" hidden novalidate>
+      <p class="gtext"><b>Passwort vergessen?</b><br>Gib deine E-Mail-Adresse ein. Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst.</p>
+      <div class="field"><label for="gFEmail">E-Mail</label><input type="email" id="gFEmail" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false"></div>
+      <p class="msg bad" id="gFErr" aria-live="assertive"></p>
+      <button class="btn primary wide" type="submit" id="gFGo">Link anfordern</button>
+      <div class="center"><button class="btn ghost" type="button" data-gm="login">Zurück zur Anmeldung</button></div>
+    </form>
+
+    <!-- Neues Passwort (aus dem Mail-Link) -->
+    <form class="gform" id="gReset" hidden novalidate>
+      <p class="gtext"><b>Neues Passwort festlegen</b><br>für <span id="gResetMail"></span></p>
+      <div class="field"><label for="gNPw">Neues Passwort</label><div class="pwbox"><input type="password" id="gNPw" autocomplete="new-password"><button type="button" class="pweye" data-eye="gNPw" aria-label="Passwort anzeigen" title="Passwort anzeigen"></button></div>
+        <div class="pwmeter" id="gNMeter" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+      <div class="field"><label for="gNPw2">Wiederholen</label><input type="password" id="gNPw2" autocomplete="new-password"></div>
+      <div class="field" id="gNCodeWrap" hidden><label for="gNCode">Code aus der Authenticator-App</label><input type="text" id="gNCode" class="codein" inputmode="numeric" autocomplete="one-time-code" maxlength="11"><span class="hint">oder ein Notfall-Code</span></div>
+      <p class="msg bad" id="gNErr" aria-live="assertive"></p>
+      <button class="btn primary wide" type="submit" id="gNGo">Passwort speichern und anmelden</button>
+    </form>
+
+    <!-- Hinweis: Mail verschickt / Link wird geprüft -->
+    <div class="gform" id="gInfo" hidden>
+      <div class="ginfo"><span class="gicon" id="gInfoIcon" aria-hidden="true">✉</span><p class="gtext" id="gInfoTxt"></p></div>
+      <p class="msg" id="gInfoMsg" aria-live="polite"></p>
+      <div class="center col">
+        <button class="btn" type="button" id="gResend" hidden>Link erneut senden</button>
+        <button class="btn ghost" type="button" data-gm="login" id="gInfoBack">Zur Anmeldung</button>
+      </div>
+    </div>
+
     <p class="ver" style="text-align:center">Version <span class="appver"></span></p>
   </div>
 </div>
