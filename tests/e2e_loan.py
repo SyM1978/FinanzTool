@@ -29,9 +29,9 @@ with sync_playwright() as p:
     # Hover-Info
     pg.hover("#aLoan label[for=aRate] .hlp"); pg.wait_for_selector("#tipBox:not([hidden])")
     ok("Sollzins" in pg.inner_text("#tipBox") and "Effektiver" in pg.inner_text("#tipBox"), "Hover-Info zum Zinssatz")
-    pg.screenshot(path="tests/shots/95_kredit_hilfe.png", clip={"x":250,"y":0,"width":1030,"height":900}, full_page=False) if False else None
+    pg.screenshot(path="shots/95_kredit_hilfe.png", clip={"x":250,"y":0,"width":1030,"height":900}, full_page=False) if False else None
     pg.locator("#aLoan label[for=aRate] .hlp").scroll_into_view_if_needed(); pg.hover("#aLoan label[for=aRate] .hlp"); pg.wait_for_timeout(200)
-    pg.screenshot(path="tests/shots/95_kredit_hilfe.png")
+    pg.screenshot(path="shots/95_kredit_hilfe.png")
     pg.mouse.move(5, 5); pg.wait_for_timeout(300); ok(pg.is_hidden("#tipBox"), "Hover-Info verschwindet")
     pg.click("#aLoan label[for=aPay] .hlp"); ok(pg.is_visible("#tipBox") and "Dauerauftrag" in pg.inner_text("#tipBox"), "Klick (Touch) öffnet Info")
     pg.keyboard.press("Escape"); ok(pg.is_hidden("#tipBox"), "Escape schließt Info")
@@ -41,7 +41,7 @@ with sync_playwright() as p:
     ok(pg.input_value("#aStartDate") == "2026-09-30", "Datum nach der letzten Rate: " + pg.input_value("#aStartDate"))
     pv = pg.inner_text("#aLoanCheck"); print(pv)
     ok("Gesamtbetrag" not in pv and "restschuld heute" in pv.lower(), "Warnung weg, Vorschau da")
-    pg.screenshot(path="tests/shots/96_kredit_vorschau.png", full_page=True)
+    pg.screenshot(path="shots/96_kredit_vorschau.png", full_page=True)
     # Exakte Bank-Restschuld eintragen und speichern
     pg.fill("#aStart", "41.814,28"); pg.fill("#aStartDate", "2026-10-15"); pg.click("#accSave"); settle()
     row = psql("select loan_rate||'|'||(extra->>'loanEff')||'|'||start_amount from fin.accounts where name='Autokredit'")
@@ -60,7 +60,7 @@ with sync_playwright() as p:
     pg.locator("#aLoan label[for=aRate] .hlp").click(); pg.wait_for_timeout(100)
     bx = pg.eval_on_selector("#tipBox", "e=>{var r=e.getBoundingClientRect();return [r.left,r.right]}")
     ok(bx[0] >= 0 and bx[1] <= 390, "Info passt aufs Handy: " + str(bx))
-    pg.screenshot(path="tests/shots/97_kredit_mobil.png")
+    pg.screenshot(path="shots/97_kredit_mobil.png")
     ok(not errs, "keine JS-Fehler " + str(errs))
     b.close()
 print("Kredit ok:", n, "Prüfungen")
