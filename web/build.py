@@ -83,6 +83,11 @@ f_ui2 = rep(f_ui2, ' Die Prognose rechnet mit Daueraufträgen, Gebühren und Zin
 f_ui2 = rep(f_ui2, '$("welcome").hidden=!!(D.accounts.length||Object.keys(D.plan).length);',
             '$("welcome").hidden=!!(D.accounts.length||Object.keys(D.plan).length||D.pos.length);', where="fin welcome")
 
+# geteilte Konten kennzeichnen (Besitzer und Recht), nicht bearbeitbar
+f_ui2 = rep(f_ui2, '\'</span><span class="kind">\'+KINDS[a.kind]+\'</span></span>', '\'</span><span class="kind">\'+(a.shared?"von "+esc(a.shared.owner):KINDS[a.kind])+\'</span></span>', where="fin tile shared")
+f_ui2 = rep(f_ui2, '$("accKind").innerHTML=\'<span class="kind">\'+KINDS[a.kind]+"</span>";', '$("accKind").innerHTML=\'<span class="kind">\'+KINDS[a.kind]+"</span>"+(a.shared?\' <span class="kind shared">geteilt von \'+esc(a.shared.owner)+(a.shared.perm==="write"?"":" · nur lesen")+"</span>":SH.sharedBadge(a.id));var ro=!!(a.shared&&a.shared.perm!=="write");$("txSave").disabled=ro;$("txSave").title=ro?"Nur zum Ansehen freigegeben":"";', where="fin acckind shared")
+f_ui4 = rep(f_ui4, '\'</small></span><button class="btn" type="button" data-eacc="\'+esc(a.id)+\'">Bearbeiten</button></li>\'', '\'</small></span>\'+(a.shared?\'<span class="kind shared">von \'+esc(a.shared.owner)+(a.shared.perm==="write"?"":" · lesen")+"</span>":\'<button class="btn" type="button" data-eacc="\'+esc(a.id)+\'">Bearbeiten</button>\')+\'</li>\'', where="fin acclist shared")
+
 # ui4: Profil, PIN und Sicherung übernimmt die Hülle
 f_ui4 = rep(f_ui4, '  $("setPName").value=P.name;$("setAutoLock").value=String(D.settings.autoLock||0);$("setCompact").checked=!!D.settings.compact;\n', "", where="fin settings1")
 f_ui4 = rex(f_ui4, r"  Array\.prototype\.forEach\.call\(document\.querySelectorAll\('input\[name=\"scheme\"\]'\)[^\n]*\n", "", where="fin settings2")

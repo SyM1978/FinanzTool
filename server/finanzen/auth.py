@@ -251,11 +251,13 @@ def register(body: RegisterIn, req: Request, resp: Response):
         raise HTTPException(429, "Zu viele Versuche. Bitte später noch einmal.")
     register_by_ip.add(ip)
     st = _reg_state()
-    if not st["open"]:
-        raise HTTPException(403, "Neue Konten sind auf diesem Server nicht freigeschaltet.")
-    if st["invite"] and not hmac.compare_digest(body.invite.strip().encode(), settings.invite_code.encode()):
-        raise HTTPException(403, "Einladungscode falsch.")
     email = body.email.strip().lower()
+    with db.tx() as c:   # wer ein Konto geteilt bekommen hat, darf sich auch ohne offene Registrierung anmelden
+        invited = c.execute("SELECT fin.share_pending(%s) AS p", (email,)).fetchone()["p"] if EMAIL_RE.match(email) else False
+    if not st["open"] and not invited:
+        raise HTTPException(403, "Neue Konten sind auf diesem Server nicht freigeschaltet.")
+    if st["invite"] and not invited and not hmac.compare_digest(body.invite.strip().encode(), settings.invite_code.encode()):
+        raise HTTPException(403, "Einladungscode falsch.")
     name = body.name.strip()[:40]
     if not EMAIL_RE.match(email) or len(email) > 200:
         raise HTTPException(400, "Bitte eine gültige E-Mail-Adresse eingeben.")
@@ -281,6 +283,7 @@ def register(body: RegisterIn, req: Request, resp: Response):
     if not verify:
         with db.tx() as c:
             c.execute("SELECT fin.auth_mark_verified(%s)", (uid,))
+            c.execute("SELECT fin.share_attach(%s)", (uid,))
         _new_session(resp, uid, req)
         return {"ok": True, "verify": False}
     try:
@@ -299,6 +302,8 @@ def verify_email(body: TokenIn, req: Request, resp: Response):
         uid = c.execute("SELECT fin.auth_verify_email(%s) AS id", (_hash_token(tok),)).fetchone()["id"]
     if not uid:
         raise HTTPException(400, "Der Link ist abgelaufen oder wurde schon benutzt. Melde dich an – falls nötig, schicken wir einen neuen.")
+    with db.tx() as c:
+        c.execute("SELECT fin.share_attach(%s)", (uid,))
     _new_session(resp, uid, req)
     return {"ok": True}
 
@@ -394,6 +399,8 @@ def reset(body: ResetIn, req: Request, resp: Response):
     if not uid:
         raise HTTPException(400, "Der Link ist abgelaufen oder wurde schon benutzt.")
     fail_by_email.reset(row["email"])
+    with db.tx() as c:
+        c.execute("SELECT fin.share_attach(%s)", (uid,))
     _new_session(resp, uid, req)
     return {"ok": True}
 

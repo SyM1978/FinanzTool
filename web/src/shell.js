@@ -5,7 +5,7 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.3.0",VDATE="2026-10-14";
+var VERSION="1.4.0",VDATE="2026-10-14";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
@@ -40,8 +40,19 @@ function fromServer(j,old){
   var by={};(j.sectx||[]).forEach(function(t){var c=Object.assign({},t),p=c.pos;delete c.pos;(by[p]=by[p]||[]).push(c)});
   o.pos=(j.pos||[]).map(function(p){return Object.assign({},p,{tx:by[p.id]||[]})});
   if(old){o.quotes=old.quotes;o.qtime=old.qtime}
+  /* Konten, die andere mit mir teilen: gehören dem Besitzer, werden hier nur eingeblendet */
+  var seen={};o.orders.forEach(function(x){seen[x.id]=1});
+  (j.shared||[]).forEach(function(sh){
+    o.accounts.push(sh.account);
+    (sh.tx||[]).forEach(function(t){o.tx.push(t)});
+    (sh.orders||[]).forEach(function(x){if(!seen[x.id]){seen[x.id]=1;o.orders.push(x)}});
+    (sh.skips||[]).forEach(function(k){o.skips.push(k)});
+  });
+  SHARES=j.shares||SHARES||[];
   return o;
 }
+var SHARES=[];
+function shareMap(D){var m={};D.accounts.forEach(function(a){if(a.shared)m[a.id]=a.shared});return m}
 function normalizeAll(o){
   var f=FINm.normalize(o),d=DEPm.normalize(o);
   var s=Object.assign({},d.settings,f.settings);s.depots=d.settings.depots;f.settings=s;
@@ -51,12 +62,14 @@ function normalizeAll(o){
 function settingsOf(D){var s=Object.assign({},D.settings);delete s.depots;s._demo=!!D.demo;s._demoDepot=!!D.demoDepot;return s}
 /* flache Sicht: je Sammlung {id: JSON} – Grundlage für den Abgleich */
 function flat(D){
-  var F={},put=function(c,id,o){F[c][id]=JSON.stringify(o)};
+  var F={sh:{}},put=function(c,id,o){F[c][id]=JSON.stringify(o)},SM=shareMap(D),osh={};
+  var sput=function(sid,c,id,o){var b=F.sh[sid]||(F.sh[sid]={tx:{},orders:{},skips:{}});b[c][id]=JSON.stringify(o)};
   COLLS.forEach(function(c){F[c]={}});
-  D.accounts.forEach(function(a,i){put("accounts",a.id,Object.assign({},a,{sort:i}))});
-  D.orders.forEach(function(x){put("orders",x.id,x)});
-  D.tx.forEach(function(x){put("tx",x.id,x)});
-  (D.skips||[]).forEach(function(s){put("skips",s.order+"|"+s.occ,{order:s.order,occ:s.occ})});
+  var ai=0;D.accounts.forEach(function(a){if(!a.shared)put("accounts",a.id,Object.assign({},a,{sort:ai++}))});
+  /* was ein geteiltes Konto betrifft, geht an den Besitzer */
+  D.orders.forEach(function(x){var sa=SM[x.from]||SM[x.to];if(sa){osh[x.id]=sa.id;sput(sa.id,"orders",x.id,x)}else put("orders",x.id,x)});
+  D.tx.forEach(function(x){var sa=SM[x.acc];if(sa)sput(sa.id,"tx",x.id,x);else put("tx",x.id,x)});
+  (D.skips||[]).forEach(function(s){var k=s.order+"|"+s.occ,o={order:s.order,occ:s.occ};if(osh[s.order])sput(osh[s.order],"skips",k,o);else put("skips",k,o)});
   Object.keys(D.plan||{}).forEach(function(y){put("plan",y,{id:y,groups:(D.plan[y]&&D.plan[y].groups)||[]})});
   (D.settings.depots||[]).forEach(function(x,i){put("depots",x.id,Object.assign({},x,{sort:i}))});
   D.pos.forEach(function(p){var c=Object.assign({},p);delete c.tx;put("pos",p.id,c);(p.tx||[]).forEach(function(t){put("sectx",t.id,Object.assign({},t,{pos:p.id}))})});
@@ -75,14 +88,25 @@ function keyOfD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,
 
 /* ---------- Abgleich ---------- */
 var SYNC={rev:0,snap:null,timer:null,inflight:false,again:false,fail:0,reload:false,lost:false,lastErr:""};
+function cdiff(a,b,c,up,del){
+  var n=0;a=a||{};b=b||{};
+  Object.keys(a).forEach(function(id){if(a[id]!==b[id]){(up[c]=up[c]||[]).push(JSON.parse(a[id]));n++}});
+  Object.keys(b).forEach(function(id){if(!(id in a)){(del[c]=del[c]||[]).push(id);n++}});
+  return n;
+}
 function diff(){
-  var cur=flat(D),up={},del={},n=0,sc=cur.settings!==SYNC.snap.settings;
-  COLLS.forEach(function(c){
-    var a=cur[c],b=SYNC.snap[c]||{};
-    Object.keys(a).forEach(function(id){if(a[id]!==b[id]){(up[c]=up[c]||[]).push(JSON.parse(a[id]));n++}});
-    Object.keys(b).forEach(function(id){if(!(id in a)){(del[c]=del[c]||[]).push(id);n++}});
+  var cur=flat(D),up={},del={},n=0,sc=cur.settings!==SYNC.snap.settings,sh={},ro=[],SM=shareMap(D),perm={};
+  COLLS.forEach(function(c){n+=cdiff(cur[c],SYNC.snap[c],c,up,del)});
+  Object.keys(SM).forEach(function(k){perm[SM[k].id]=SM[k]});
+  var ids={};Object.keys(cur.sh).concat(Object.keys(SYNC.snap.sh||{})).forEach(function(x){ids[x]=1});
+  Object.keys(ids).forEach(function(sid){
+    var a=cur.sh[sid]||{},b=(SYNC.snap.sh||{})[sid]||{},u={},d={},k=0;
+    ["tx","orders","skips"].forEach(function(c){k+=cdiff(a[c],b[c],c,u,d)});
+    if(!k)return;
+    if(!perm[sid]||perm[sid].perm!=="write"){ro.push(sid);return}   /* nur Lesezugriff: nicht senden */
+    sh[sid]={upsert:u,delete:d};n+=k;
   });
-  return {cur:cur,up:up,del:del,n:n,sc:sc};
+  return {cur:cur,up:up,del:del,n:n,sc:sc,sh:sh,ro:ro};
 }
 function pending(){if(!D||!SYNC.snap)return false;if(SYNC.inflight||SYNC.timer)return true;var d=diff();return d.n>0||d.sc}
 function changed(mod,light){
@@ -99,12 +123,23 @@ function pushNow(){
   if(SYNC.inflight){SYNC.again=true;return}
   clearTimeout(SYNC.timer);SYNC.timer=null;
   var d=diff();
+  if(d.ro.length){
+    /* Änderung an einem nur lesbar geteilten Konto: verwerfen und Serverstand neu laden */
+    var nm=D.accounts.filter(function(a){return a.shared&&d.ro.indexOf(a.shared.id)>=0}).map(function(a){return "„"+a.name+"“"}).join(", ");
+    showSyncBar("<b>Nicht gespeichert:</b> "+esc(nm||"Dieses Konto")+" ist für dich nur zum Ansehen freigegeben. Die Änderung wurde zurückgenommen.",false);
+    SYNC.reload=true;
+    if(!d.n&&!d.sc){maybeReload();return}
+  }
   if(!d.n&&!d.sc){setSync("ok");maybeReload();return}
   SYNC.inflight=true;setSync("saving");
   var body={base_rev:SYNC.rev,upsert:d.up,delete:d.del};if(d.sc)body.settings=JSON.parse(d.cur.settings);
+  if(Object.keys(d.sh).length)body.shared=d.sh;
   api("POST","/api/sync",body).then(function(j){
     SYNC.snap=d.cur;SYNC.rev=j.rev;SYNC.fail=0;SYNC.lastErr="";if(j.reload)SYNC.reload=true;
-    if(j.rejected&&j.rejected.length){showSyncBar(j.rejected.length+(j.rejected.length===1?" Eintrag wurde":" Einträge wurden")+" vom Server abgelehnt (ungültige Werte) und nicht gespeichert.",false)}else hideSyncBar();
+    if(j.srev!=null){if(Object.keys(d.sh).length)SYNC.srev=j.srev;else if(j.srev!==SYNC.srev)SYNC.reload=true}
+    var rj=(j.rejected||[]).filter(function(x){return x.coll==="shared"});
+    if(rj.length){SYNC.reload=true;showSyncBar("<b>Nicht gespeichert:</b> Die Freigabe für ein geteiltes Konto hat sich geändert (nur noch lesen oder zurückgenommen). Die Daten werden neu geladen.",false)}
+    else if(j.rejected&&j.rejected.length){showSyncBar(j.rejected.length+(j.rejected.length===1?" Eintrag wurde":" Einträge wurden")+" vom Server abgelehnt (ungültige Werte) und nicht gespeichert.",false)}else if(!d.ro.length)hideSyncBar();
   },function(e){
     SYNC.fail++;SYNC.lastErr=e.message;
   }).then(function(){
@@ -118,7 +153,7 @@ function pushNow(){
 function maybeReload(){if(SYNC.reload&&!pending()){SYNC.reload=false;loadData(false)}}
 function pollRev(){
   if(!D||PREVIEW||SYNC.lost||document.hidden)return;
-  api("GET","/api/rev").then(function(j){if(j.rev!==SYNC.rev){SYNC.reload=true;maybeReload()}}).catch(function(){});
+  api("GET","/api/rev").then(function(j){if(j.rev!==SYNC.rev||(j.srev!=null&&j.srev!==SYNC.srev)){SYNC.reload=true;maybeReload()}}).catch(function(){});
 }
 function setSync(st){
   var t={ok:"gespeichert",pending:"Änderung …",saving:"speichert …",error:"nicht gespeichert",preview:"Vorschau, nur im Speicher",loading:"lädt …"}[st]||st;
@@ -367,7 +402,9 @@ $("gReset").addEventListener("submit",function(e){
 
 /* Links aus Mails: #verify=…, #reset=…, #forgot */
 function handleAuthHash(reg){
-  var h=location.hash.slice(1),m=/^(verify|reset)=([A-Za-z0-9_\-]{20,100})$/.exec(h);
+  var h=location.hash.slice(1),m=/^(verify|reset)=([A-Za-z0-9_\-]{20,100})$/.exec(h),rg=/^register=(.+)$/.exec(h);
+  if(rg){try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+    var em=decodeURIComponent(rg[1]);showGate(Object.assign({},reg,{invite:false}),"<b>Du wurdest eingeladen.</b> Lege mit <b>"+esc(em)+"</b> ein Konto an, dann siehst du das geteilte Konto.","reg");$("gREmail").value=em;return true}
   if(!m&&h!=="forgot")return false;
   try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
   if(h==="forgot"){showGate(reg,null,"forgot");return true}
@@ -417,7 +454,7 @@ function loadData(first){
 }
 function applyServer(j,first){
   var o=fromServer(j,D),snap=flat(o);   /* Stand des Servers, vor dem Normalisieren */
-  D=normalizeAll(o);SYNC.rev=j.rev;SYNC.userId=P.id;
+  D=normalizeAll(o);SYNC.rev=j.rev;SYNC.srev=j.srev;SYNC.userId=P.id;
   FINm.setD(D);DEPm.setD(D);
   SYNC.snap=snap;
   /* Normalisieren kann Kleinigkeiten ergänzen (z. B. erstes Depot): einmal nachschieben */
@@ -438,7 +475,7 @@ function renderShellSettings(){
   $("setCompact").checked=!!D.settings.compact;
   Array.prototype.forEach.call(document.querySelectorAll('input[name="scheme"]'),function(r){r.checked=r.value===(D.settings.scheme||"smooth")});
   var n=D.accounts.length+" Konten, "+D.tx.length+" Buchungen, "+D.pos.length+" Positionen";$("dataMeta").textContent=n;
-  renderTfa();
+  renderTfa();renderShares();
 }
 $("uName").addEventListener("change",function(){var v=this.value.trim();if(!v){this.value=P.name;return}api("POST","/api/auth/profile",{name:v}).then(function(){P.name=v;USER.name=v;renderAll();setMsg("userMsg","Name gespeichert.")}).catch(function(e){setMsg("userMsg",e.message,true)})});
 $("uPwSave").addEventListener("click",function(){
@@ -496,6 +533,56 @@ $("tfaOff").addEventListener("click",function(){
     api("POST","/api/auth/totp/disable",{password:pw,code:c}).then(function(){$("tfaOffPw").value=$("tfaOffCode").value="";return refreshMe()}).then(function(){renderTfa();setMsg("tfaMsg","Zwei-Faktor ist ausgeschaltet.")}).catch(function(e){setMsg("tfaMsg",e.message,true)});
   });
 });
+
+
+/* ---------- Konten teilen ---------- */
+var PERM={write:"ansehen und buchen",read:"nur ansehen"};
+function sharedBadge(accId){
+  var n=(SHARES||[]).filter(function(x){return x.dir==="out"&&x.account===accId});
+  return n.length?' <span class="kind shared">geteilt mit '+esc(n.map(function(x){return x.name||x.email}).join(", "))+"</span>":"";
+}
+function renderShares(){
+  if(!D)return;
+  var own=FINm.own(),sel=$("shAcc"),keep=sel.value;
+  sel.innerHTML=own.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+"</option>"}).join("")||'<option value="">Erst ein Konto anlegen</option>';
+  if(keep&&sel.getAttribute("data-touched")&&own.some(function(a){return a.id===keep}))sel.value=keep;
+  else{var h=own.filter(function(a){return a.kind==="haushalt"})[0];if(h)sel.value=h.id}
+  var out=SHARES.filter(function(x){return x.dir==="out"}),inn=SHARES.filter(function(x){return x.dir==="in"});
+  $("shOutWrap").hidden=!out.length;$("shInWrap").hidden=!inn.length;
+  $("shOut").innerHTML=out.map(function(x){
+    return '<li><span class="what"><b>'+esc(x.account_name)+"</b> → "+esc(x.name||x.email)+"<small>"+esc(x.email)+(x.pending?" · Einladung offen, noch nicht registriert":"")+'</small></span><span class="acts">'+
+      '<select data-shperm="'+esc(x.id)+'" aria-label="Recht für '+esc(x.email)+'"><option value="write"'+(x.perm==="write"?" selected":"")+'>ansehen und buchen</option><option value="read"'+(x.perm==="read"?" selected":"")+'>nur ansehen</option></select>'+
+      '<button class="btn" type="button" data-shdel="'+esc(x.id)+'">Zurücknehmen</button></span></li>';
+  }).join("");
+  $("shIn").innerHTML=inn.map(function(x){
+    return '<li><span class="what"><b>'+esc(x.account_name)+"</b> von "+esc(x.owner)+"<small>"+esc(x.owner_email)+" · "+PERM[x.perm]+'</small></span><span class="acts"><button class="btn" type="button" data-shleave="'+esc(x.id)+'">Verlassen</button></span></li>';
+  }).join("");
+  $("shareMeta").textContent=(out.length?out.length+" geteilt":"")+(out.length&&inn.length?" · ":"")+(inn.length?inn.length+" für dich":"");
+}
+function reloadShares(msg){return api("GET","/api/shares").then(function(j){SHARES=j.shares||[];renderShares();FINm.render();if(msg)setMsg("shMsg",msg)})}
+$("shAcc").addEventListener("change",function(){this.setAttribute("data-touched","1")});
+$("shGo").addEventListener("click",function(){
+  var acc=$("shAcc").value,em=$("shMail").value.trim(),pm=$("shPerm").value;
+  if(!acc){setMsg("shMsg","Bitte zuerst ein Konto anlegen.",true);return}
+  if(!EMAIL_OK(em)){setMsg("shMsg","Bitte eine gültige E-Mail-Adresse eingeben.",true);$("shMail").focus();return}
+  if(pending())pushNow();   /* neues Konto zuerst speichern */
+  var go=function(){return api("POST","/api/shares",{account:acc,email:em,perm:pm})};
+  (SYNC.inflight||SYNC.timer?new Promise(function(r){setTimeout(r,1500)}).then(go):go()).then(function(j){
+    $("shMail").value="";
+    var an=(FINm.own().filter(function(a){return a.id===acc})[0]||{}).name||"Konto";
+    var t=j.updated?"Recht für "+em+" geändert.":j.registered?"„"+an+"“ ist für "+em+" freigegeben"+(j.mail?" und eine Mail ist unterwegs.":". Die Mail konnte nicht verschickt werden, die Freigabe gilt trotzdem."):
+      "Einladung an "+em+(j.mail?" verschickt.":" angelegt (Mail nicht verschickt).")+" Sobald sich die Person mit dieser Adresse registriert, sieht sie „"+an+"“.";
+    return reloadShares(t);
+  }).catch(function(e){setMsg("shMsg",e.message,true)});
+});
+$("shOut").addEventListener("change",function(e){var s=e.target.closest("[data-shperm]");if(!s)return;
+  api("POST","/api/shares/"+s.getAttribute("data-shperm")+"/perm",{perm:s.value}).then(function(){return reloadShares("Gespeichert: "+PERM[s.value]+".")}).catch(function(x){setMsg("shMsg",x.message,true)})});
+$("shOut").addEventListener("click",function(e){var b=e.target.closest("[data-shdel]");if(!b)return;
+  armed(b,"Wirklich zurücknehmen?",function(){api("DELETE","/api/shares/"+b.getAttribute("data-shdel")).then(function(){return reloadShares("Freigabe zurückgenommen.")}).catch(function(x){setMsg("shMsg",x.message,true)})})});
+$("shIn").addEventListener("click",function(e){var b=e.target.closest("[data-shleave]");if(!b)return;
+  armed(b,"Verlassen? Du siehst das Konto dann nicht mehr.",function(){
+    if(pending())pushNow();
+    api("DELETE","/api/shares/"+b.getAttribute("data-shleave")).then(function(){setMsg("shMsg","Freigabe verlassen.");return loadData(false)}).catch(function(x){setMsg("shMsg",x.message,true)})})});
 
 /* Export */
 $("xAll").addEventListener("click",function(){
@@ -577,5 +664,5 @@ function boot(){
 
 return {VERSION:VERSION,VDATE:VDATE,$:$,esc:esc,P:P,VIEWS:VIEWS,api:api,boot:boot,changed:changed,showView:showView,setDrawer:setDrawer,applyLook:applyLook,applySect:applySect,
   setMsg:setMsg,armed:armed,download:download,sessionLost:sessionLost,refreshMe:refreshMe,user:function(){return USER},cashPicker:cashPicker,
-  depotValue:function(){return DEPm?DEPm.value():null},preview:PREVIEW,_D:function(){return D},_export:function(){return toExport(D)},_sync:SYNC,_pending:pending,_push:pushNow};
+  depotValue:function(){return DEPm?DEPm.value():null},sharedBadge:sharedBadge,preview:PREVIEW,_D:function(){return D},_export:function(){return toExport(D)},_sync:SYNC,_pending:pending,_push:pushNow};
 })();

@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import VERSION, alerts, auth, db, market, sync
+from . import VERSION, alerts, auth, db, market, shares, sync
 from .config import settings
 
 
@@ -61,6 +61,7 @@ app.include_router(auth.router)
 app.include_router(sync.router)
 app.include_router(market.router)
 app.include_router(alerts.router)
+app.include_router(shares.router)
 
 
 @app.get("/api/health")

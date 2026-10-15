@@ -198,3 +198,19 @@ def mail_test(to: str, name: str = "") -> None:
             "Landet diese Mail im Spam-Ordner? Markiere sie als „Kein Spam“ und füge den Absender zu deinen Kontakten hinzu.</p>")
     send_mail(to, "Test von Meine Finanzen", _text(f"Hallo {name}," if name else "Hallo,", ["diese Test-Mail zeigt: Der Mailversand vom Server funktioniert."]),
               _layout("Dein Server kann Mails verschicken.", title, body))
+
+
+def mail_share(to: str, owner: str, owner_email: str, account: str, perm: str, link: str, registered: bool) -> None:
+    right = "ansehen und darauf buchen" if perm == "write" else "ansehen"
+    title = f"{owner} teilt ein Konto mit dir"
+    body = (_p("Hallo,") +
+            _p(f"<b>{e(owner)}</b> ({e(owner_email)}) hat dir das Konto <b>„{e(account)}“</b> in <b>Meine Finanzen</b> freigegeben. "
+               f"Du kannst es {right}.") +
+            (_p("Du findest es ab sofort bei deinen Konten und im Dashboard.") if registered else
+             _p("Lege dazu mit <b>dieser E-Mail-Adresse</b> ein Konto an. Danach erscheint das geteilte Konto automatisch bei dir.")) +
+            _button("Konto öffnen" if registered else "Konto anlegen", link))
+    note = ("Die Freigabe kannst du jederzeit unter Einstellungen › Konten teilen wieder verlassen."
+            if registered else "Kennst du die Person nicht? Dann ignoriere diese Mail einfach.")
+    send_mail(to, title, _text("Hallo,", [f"{owner} ({owner_email}) hat dir das Konto „{account}“ in Meine Finanzen freigegeben. Du kannst es {right}.",
+                                          "" if registered else "Lege dazu mit dieser E-Mail-Adresse ein Konto an:"], link, note),
+              _layout(f"„{account}“ – {right}", title, body, note))

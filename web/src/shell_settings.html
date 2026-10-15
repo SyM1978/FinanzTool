@@ -4,6 +4,7 @@
     <div class="setnav" role="navigation" aria-label="Bereiche der Einstellungen">
       <a href="#einstellungen" data-go="einstellungen#setuser">Benutzerkonto</a>
       <a href="#einstellungen" data-go="einstellungen#konten">Konten</a>
+      <a href="#einstellungen" data-go="einstellungen#setshare">Konten teilen</a>
       <a href="#einstellungen" data-go="einstellungen#import">Excel-Import</a>
       <a href="#einstellungen" data-go="einstellungen#setapi">Kurse &amp; Steuern</a>
       <a href="#einstellungen" data-go="einstellungen#setdep">Depots</a>
@@ -75,6 +76,20 @@
     </details>
 
 %%FIN_SETTINGS%%
+    <details class="card sect" data-sec="setshare" id="setshare" open><summary><span>Konten teilen</span><span class="smeta" id="shareMeta"></span></summary>
+      <p class="note">Gib ein Konto für eine andere Person frei, z. B. das Haushaltskonto für deine Partnerin. Sie meldet sich mit ihrem eigenen Benutzerkonto an und sieht nur dieses Konto, nicht deine übrigen Daten.</p>
+      <div class="form">
+        <div class="field"><label for="shAcc">Konto</label><select id="shAcc"></select></div>
+        <div class="field"><label for="shMail">E-Mail-Adresse</label><input type="email" id="shMail" autocomplete="off" inputmode="email" placeholder="partnerin@beispiel.de"></div>
+        <div class="field"><label for="shPerm">Darf</label><select id="shPerm"><option value="write">ansehen und buchen</option><option value="read">nur ansehen</option></select></div>
+      </div>
+      <div class="row"><button class="btn primary" id="shGo" type="button">Freigeben und per Mail benachrichtigen</button></div>
+      <p class="msg" id="shMsg" aria-live="polite"></p>
+      <div id="shOutWrap" hidden><span class="flabel">Deine Freigaben</span><ul class="lst" id="shOut"></ul></div>
+      <div id="shInWrap" hidden><span class="flabel">Für dich freigegeben</span><ul class="lst" id="shIn"></ul></div>
+      <p class="hintline">„Buchen“ heißt: Buchungen und Daueraufträge auf diesem Konto anlegen, ändern und löschen. Name, Startwert und Einstellungen des Kontos ändert nur der Besitzer. Hat die Person noch kein Benutzerkonto, bekommt sie eine Einladung und sieht das Konto, sobald sie sich mit dieser Adresse registriert hat.</p>
+    </details>
+
     <details class="card sect" data-sec="setapi" id="setapi" open><summary><span>Kurse &amp; Steuern</span><span class="smeta" id="apiMeta"></span></summary>
       <div class="form">
         <div class="field">

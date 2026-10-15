@@ -337,7 +337,7 @@ def _upsert(c, uid: str, coll: Coll, rows: List[dict], rejected: List[dict]) -> 
 
 
 def _write_plan_year(c, uid: str, year: int, data: Any) -> None:
-    c.execute("DELETE FROM fin.plan_groups WHERE year = %s", (year,))
+    c.execute("DELETE FROM fin.plan_groups WHERE user_id = %s AND year = %s", (uid, year))
     groups = (data or {}).get("groups") if isinstance(data, dict) else None
     if not isinstance(groups, list):
         return
@@ -366,10 +366,10 @@ def _write_plan_year(c, uid: str, year: int, data: Any) -> None:
             ii.append((uid, iid, gid, str(it.get("name") or "Posten")[:80], months, isort, Jsonb(ix)))
     # IDs müssen über alle Jahre eindeutig sein; gleiche IDs aus anderen Jahren vorher entfernen
     if gi:
-        c.execute("DELETE FROM fin.plan_groups WHERE id = ANY(%s)", ([g[1] for g in gi],))
+        c.execute("DELETE FROM fin.plan_groups WHERE user_id = %s AND id = ANY(%s)", (uid, [g[1] for g in gi]))
         c.cursor().executemany("INSERT INTO fin.plan_groups(user_id, id, year, name, kind, sort, extra) VALUES (%s,%s,%s,%s,%s,%s,%s)", gi)
     if ii:
-        c.execute("DELETE FROM fin.plan_items WHERE id = ANY(%s)", ([i[1] for i in ii],))
+        c.execute("DELETE FROM fin.plan_items WHERE user_id = %s AND id = ANY(%s)", (uid, [i[1] for i in ii]))
         c.cursor().executemany("INSERT INTO fin.plan_items(user_id, id, group_id, name, months, sort, extra) VALUES (%s,%s,%s,%s,%s,%s,%s)", ii)
 
 
@@ -382,16 +382,16 @@ def load_all(c, uid: str) -> dict:
     for name in ORDER:
         coll = COLLS[name]
         order = "sort, id" if coll.sort_col else ("date, id" if name in ("tx", "sectx", "events") else "id")
-        rows = c.execute(f"SELECT * FROM fin.{coll.table} ORDER BY {order}").fetchall()
+        rows = c.execute(f"SELECT * FROM fin.{coll.table} WHERE user_id = %s ORDER BY {order}", (uid,)).fetchall()
         objs = [coll.to_obj(r) for r in rows]
         if name in EMPTY_AS_STR:
             objs = [_out_text_empty(o, EMPTY_AS_STR[name]) for o in objs]
         out[name] = objs
     out["skips"] = [{"order": r["order_id"], "occ": r["occ"].isoformat()} for r in
-                    c.execute("SELECT order_id, occ FROM fin.order_skips ORDER BY order_id, occ").fetchall()]
+                    c.execute("SELECT order_id, occ FROM fin.order_skips WHERE user_id = %s ORDER BY order_id, occ", (uid,)).fetchall()]
     plan: Dict[str, Any] = {}
-    groups = c.execute("SELECT * FROM fin.plan_groups ORDER BY year, sort").fetchall()
-    items = c.execute("SELECT * FROM fin.plan_items ORDER BY sort").fetchall()
+    groups = c.execute("SELECT * FROM fin.plan_groups WHERE user_id = %s ORDER BY year, sort", (uid,)).fetchall()
+    items = c.execute("SELECT * FROM fin.plan_items WHERE user_id = %s ORDER BY sort", (uid,)).fetchall()
     by_g: Dict[str, list] = {}
     for it in items:
         o = {"id": it["id"], "name": it["name"], "m": [int(x) for x in it["months"]]}
@@ -404,6 +404,37 @@ def load_all(c, uid: str) -> dict:
             o.setdefault(k, v)
         plan.setdefault(str(g["year"]), {"groups": []})["groups"].append(o)
     out["plan"] = plan
+    out["shared"] = load_shared(c, uid)
+    out["shares"] = share_rows(c)
+    out["srev"] = c.execute("SELECT fin.shared_rev() AS s").fetchone()["s"]
+    return out
+
+
+def share_rows(c) -> list:
+    rows = c.execute("SELECT * FROM fin.share_list()").fetchall()
+    return [{"id": str(r["id"]), "dir": r["dir"], "account": r["account_id"], "account_name": r["account_name"],
+             "owner": r["owner_name"], "owner_email": r["owner_email"], "email": r["grantee_email"],
+             "name": r["grantee_name"] or "", "pending": r["grantee_id"] is None, "perm": r["perm"]} for r in rows]
+
+
+def load_shared(c, uid: str) -> list:
+    """Konten, die andere mit mir teilen – mit Buchungen, betroffenen Daueraufträgen und Ausnahmen."""
+    out = []
+    for sh in c.execute("SELECT * FROM fin.share_list() WHERE dir = 'in' AND grantee_id = %s", (uid,)).fetchall():
+        owner, acc = sh["owner_id"], sh["account_id"]
+        a = c.execute("SELECT * FROM fin.accounts WHERE user_id = %s AND id = %s", (owner, acc)).fetchone()
+        if not a:
+            continue
+        aobj = COLLS["accounts"].to_obj(a)
+        aobj["shared"] = {"id": str(sh["id"]), "owner": sh["owner_name"], "perm": sh["perm"]}
+        tx = [_out_text_empty(COLLS["tx"].to_obj(r), EMPTY_AS_STR["tx"]) for r in
+              c.execute("SELECT * FROM fin.bookings WHERE user_id = %s AND acc = %s ORDER BY date, id", (owner, acc)).fetchall()]
+        orows = c.execute("SELECT * FROM fin.orders WHERE user_id = %s AND (from_acc = %s OR to_acc = %s) ORDER BY id", (owner, acc, acc)).fetchall()
+        orders = [_out_text_empty(COLLS["orders"].to_obj(r), EMPTY_AS_STR["orders"]) for r in orows]
+        oids = [r["id"] for r in orows]
+        skips = [{"order": r["order_id"], "occ": r["occ"].isoformat()} for r in
+                 c.execute("SELECT order_id, occ FROM fin.order_skips WHERE user_id = %s AND order_id = ANY(%s)", (owner, oids)).fetchall()] if oids else []
+        out.append({"share": str(sh["id"]), "owner": sh["owner_name"], "perm": sh["perm"], "account": aobj, "tx": tx, "orders": orders, "skips": skips})
     return out
 
 
@@ -417,7 +448,8 @@ def get_data(u: User = Depends(current_user)):
 def get_rev(u: User = Depends(current_user)):
     """Kleiner Abruf für andere Geräte: hat sich seit dem Laden etwas geändert?"""
     with db.tx(u.id) as c:
-        return {"rev": c.execute("SELECT rev FROM fin.users WHERE id = %s", (u.id,)).fetchone()["rev"]}
+        return {"rev": c.execute("SELECT rev FROM fin.users WHERE id = %s", (u.id,)).fetchone()["rev"],
+                "srev": c.execute("SELECT fin.shared_rev() AS s").fetchone()["s"]}
 
 
 @router.post("/sync")
@@ -473,7 +505,7 @@ def apply_sync(uid: str, body: dict) -> dict:
         for name in reversed(ORDER):
             ids = [str(x) for x in (dels.get(name) or []) if isinstance(x, (str, int))]
             if ids:
-                c.execute(f"DELETE FROM fin.{COLLS[name].table} WHERE id = ANY(%s)", (ids,))
+                c.execute(f"DELETE FROM fin.{COLLS[name].table} WHERE user_id = %s AND id = ANY(%s)", (uid, ids))
         # Schreiben (Eltern zuerst)
         for name in ORDER:
             _upsert(c, uid, COLLS[name], prepared.get(name, []), rejected)
@@ -482,7 +514,7 @@ def apply_sync(uid: str, body: dict) -> dict:
         for sid in sk_del:
             o, _, occ = sid.rpartition("|")
             if o and DATE_RE.match(occ):
-                c.execute("DELETE FROM fin.order_skips WHERE order_id = %s AND occ = %s", (o, occ))
+                c.execute("DELETE FROM fin.order_skips WHERE user_id = %s AND order_id = %s AND occ = %s", (uid, o, occ))
         sk = []
         for x in ups.get("skips") or []:
             if isinstance(x, dict) and x.get("order") and isinstance(x.get("occ"), str) and DATE_RE.match(x["occ"]):
@@ -492,7 +524,7 @@ def apply_sync(uid: str, body: dict) -> dict:
         # Finanzplan: ganze Jahre
         for y in dels.get("plan") or []:
             try:
-                c.execute("DELETE FROM fin.plan_groups WHERE year = %s", (int(y),))
+                c.execute("DELETE FROM fin.plan_groups WHERE user_id = %s AND year = %s", (uid, int(y)))
             except (TypeError, ValueError):
                 pass
         for p in ups.get("plan") or []:
@@ -508,7 +540,62 @@ def apply_sync(uid: str, body: dict) -> dict:
             coll = COLLS[name]
             if coll.parent:
                 col, ptab, pcol = coll.parent
-                c.execute(f"DELETE FROM fin.{coll.table} t WHERE NOT EXISTS (SELECT 1 FROM fin.{ptab} p WHERE p.user_id = t.user_id AND p.{pcol} = t.{col})")
-        c.execute("DELETE FROM fin.plan_items i WHERE NOT EXISTS (SELECT 1 FROM fin.plan_groups g WHERE g.user_id = i.user_id AND g.id = i.group_id)")
+                c.execute(f"DELETE FROM fin.{coll.table} t WHERE t.user_id = %s AND NOT EXISTS (SELECT 1 FROM fin.{ptab} p WHERE p.user_id = t.user_id AND p.{pcol} = t.{col})", (uid,))
+        c.execute("DELETE FROM fin.plan_items i WHERE i.user_id = %s AND NOT EXISTS (SELECT 1 FROM fin.plan_groups g WHERE g.user_id = i.user_id AND g.id = i.group_id)", (uid,))
         new = c.execute("UPDATE fin.users SET rev = rev + 1 WHERE id = %s RETURNING rev", (uid,)).fetchone()["rev"]
-    return {"ok": True, "rev": new, "reload": base is not None and base != old, "rejected": rejected[:50]}
+        sh = body.get("shared")
+        if isinstance(sh, dict) and sh:
+            _apply_shared(c, uid, sh, rejected)
+        srev = c.execute("SELECT fin.shared_rev() AS s").fetchone()["s"]
+    return {"ok": True, "rev": new, "srev": srev, "reload": base is not None and base != old, "rejected": rejected[:50]}
+
+
+def _apply_shared(c, uid: str, shared: dict, rejected: List[dict]) -> None:
+    """Änderungen an Konten, die andere mit mir teilen. Geschrieben wird in die Tabellen des
+    Besitzers; die Policies der Datenbank lassen nur Freigaben mit Schreibrecht durch."""
+    for sid, part in list(shared.items())[:20]:
+        if not isinstance(part, dict):
+            continue
+        sh = c.execute("SELECT owner_id, account_id, perm FROM fin.account_shares WHERE id::text = %s AND grantee_id = %s",
+                       (str(sid), uid)).fetchone()
+        ups, dels = part.get("upsert") or {}, part.get("delete") or {}
+        n = sum(len(v) for v in list(ups.values()) + list(dels.values()) if isinstance(v, list))
+        if not sh or sh["perm"] != "write":
+            if n:
+                rejected.append({"coll": "shared", "id": str(sid), "why": "nur Lesezugriff" if sh else "Freigabe nicht gefunden"})
+            continue
+        owner, acc = str(sh["owner_id"]), sh["account_id"]
+        # Löschen: nur Datensätze dieses Kontos
+        tx_del = [str(x) for x in (dels.get("tx") or [])][:MAX_ITEMS]
+        if tx_del:
+            c.execute("DELETE FROM fin.bookings WHERE user_id = %s AND acc = %s AND id = ANY(%s)", (owner, acc, tx_del))
+        or_del = [str(x) for x in (dels.get("orders") or [])][:MAX_ITEMS]
+        if or_del:
+            c.execute("DELETE FROM fin.orders WHERE user_id = %s AND (from_acc = %s OR to_acc = %s) AND id = ANY(%s)", (owner, acc, acc, or_del))
+        for skid in [str(x) for x in (dels.get("skips") or [])]:
+            o, _, occ = skid.rpartition("|")
+            if o and DATE_RE.match(occ):
+                c.execute("DELETE FROM fin.order_skips WHERE user_id = %s AND order_id = %s AND occ = %s", (owner, o, occ))
+        # Schreiben
+        for name, check in (("orders", lambda r: acc in (r.get("from_acc"), r.get("to_acc"))), ("tx", lambda r: r.get("acc") == acc)):
+            rows = []
+            for obj in ups.get(name) or []:
+                try:
+                    r = COLLS[name].to_row(obj, 0)
+                except Reject as e:
+                    rejected.append({"coll": name, "id": obj.get("id") if isinstance(obj, dict) else None, "why": str(e)})
+                    continue
+                if not check(r):
+                    rejected.append({"coll": name, "id": r["id"], "why": "gehört nicht zum geteilten Konto"})
+                    continue
+                rows.append(r)
+            _upsert(c, owner, COLLS[name], rows, rejected)
+        sk = [(owner, str(x["order"])[:80], x["occ"]) for x in (ups.get("skips") or [])
+              if isinstance(x, dict) and x.get("order") and isinstance(x.get("occ"), str) and DATE_RE.match(x["occ"])]
+        for a in sk:
+            try:
+                with c.transaction():
+                    c.execute("INSERT INTO fin.order_skips(user_id, order_id, occ) VALUES (%s,%s,%s) ON CONFLICT DO NOTHING", a)
+            except psycopg.Error:
+                rejected.append({"coll": "skips", "id": a[1] + "|" + a[2], "why": "nicht erlaubt"})
+        c.execute("SELECT fin.share_touch(%s)", (owner,))

@@ -143,3 +143,9 @@ tr.grp .mkdot{margin-right:8px;cursor:default}
 .linkrow .what{flex:1;min-width:0}
 .linkrow .mono{white-space:nowrap;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
 .dbmovers .lst li{padding:6px 0}
+/* ===== Geteilte Konten ===== */
+.kind.shared{color:var(--accent);font-weight:600}
+#shOut select{font-size:13px;padding:5px 8px;width:auto}
+#shOut .acts,#shIn .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#shOutWrap,#shInWrap{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+#shOutWrap[hidden],#shInWrap[hidden]{display:none}

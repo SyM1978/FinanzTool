@@ -50,7 +50,8 @@ return {
   checkDay:function(){if(D&&CACHE.today&&CACHE.today!==todayKey())renderAll()},
   merge:function(src){if(D.demo)clearDemo();var n=mergeInto(D,src);touch();return n},
   importPlan:function(J,ch){return importPlan(D,J,ch)},
-  accounts:function(){return D?D.accounts.filter(function(a){return !isLoan(a)}):[]},
+  accounts:function(){return D?D.accounts.filter(function(a){return !isLoan(a)&&!a.shared}):[]},
+  own:function(){return D?D.accounts.filter(function(a){return !a.shared}):[]},
   summary:summary,
   eur:eur
 };

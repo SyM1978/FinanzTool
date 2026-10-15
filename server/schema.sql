@@ -440,10 +440,120 @@ GRANT EXECUTE ON FUNCTION fin.auth_lookup2(text), fin.auth_totp_used(uuid, bigin
 ALTER TABLE price_alerts DROP CONSTRAINT IF EXISTS price_alerts_type_check;
 ALTER TABLE price_alerts ADD CONSTRAINT price_alerts_type_check CHECK (type IN ('above','below','dayDown','dayUp','dayMove'));
 
+-- ---------------------------------------------------------------------
+-- Version 4: Konten mit anderen Benutzern teilen (lesen oder lesen+schreiben)
+-- Die Daten bleiben beim Besitzer (user_id); zusätzliche Policies erlauben
+-- dem Empfänger Zugriff auf genau dieses Konto, seine Buchungen und die
+-- Daueraufträge, die es betreffen.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS account_shares (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id      uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  account_id    text NOT NULL,
+  grantee_email citext NOT NULL,
+  grantee_id    uuid REFERENCES users(id) ON DELETE CASCADE,    -- NULL = wartet auf Registrierung
+  perm          text NOT NULL CHECK (perm IN ('read','write')),
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (owner_id, account_id, grantee_email),
+  FOREIGN KEY (owner_id, account_id) REFERENCES accounts(user_id, id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS account_shares_grantee ON account_shares(grantee_id);
+ALTER TABLE account_shares ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS share_owner ON account_shares;
+CREATE POLICY share_owner ON account_shares USING (owner_id = fin.uid()) WITH CHECK (owner_id = fin.uid());
+DROP POLICY IF EXISTS share_grantee_see ON account_shares;
+CREATE POLICY share_grantee_see ON account_shares FOR SELECT USING (grantee_id = fin.uid());
+DROP POLICY IF EXISTS share_grantee_leave ON account_shares;
+CREATE POLICY share_grantee_leave ON account_shares FOR DELETE USING (grantee_id = fin.uid());
+GRANT SELECT, INSERT, UPDATE, DELETE ON account_shares TO finanzen_app;
+
+CREATE OR REPLACE FUNCTION fin.can_read(p_owner uuid, p_acc text) RETURNS boolean LANGUAGE sql STABLE AS
+$$ SELECT p_acc IS NOT NULL AND EXISTS (SELECT 1 FROM fin.account_shares s WHERE s.owner_id = p_owner AND s.account_id = p_acc AND s.grantee_id = fin.uid()) $$;
+CREATE OR REPLACE FUNCTION fin.can_write(p_owner uuid, p_acc text) RETURNS boolean LANGUAGE sql STABLE AS
+$$ SELECT p_acc IS NOT NULL AND EXISTS (SELECT 1 FROM fin.account_shares s WHERE s.owner_id = p_owner AND s.account_id = p_acc AND s.grantee_id = fin.uid() AND s.perm = 'write') $$;
+GRANT EXECUTE ON FUNCTION fin.can_read(uuid, text), fin.can_write(uuid, text) TO finanzen_app;
+
+DROP POLICY IF EXISTS shared_read ON accounts;
+CREATE POLICY shared_read ON accounts FOR SELECT USING (fin.can_read(user_id, id));
+
+DROP POLICY IF EXISTS shared_read ON bookings;
+DROP POLICY IF EXISTS shared_ins ON bookings;
+DROP POLICY IF EXISTS shared_upd ON bookings;
+DROP POLICY IF EXISTS shared_del ON bookings;
+CREATE POLICY shared_read ON bookings FOR SELECT USING (fin.can_read(user_id, acc));
+CREATE POLICY shared_ins  ON bookings FOR INSERT WITH CHECK (fin.can_write(user_id, acc));
+CREATE POLICY shared_upd  ON bookings FOR UPDATE USING (fin.can_write(user_id, acc)) WITH CHECK (fin.can_write(user_id, acc));
+CREATE POLICY shared_del  ON bookings FOR DELETE USING (fin.can_write(user_id, acc));
+
+DROP POLICY IF EXISTS shared_read ON orders;
+DROP POLICY IF EXISTS shared_ins ON orders;
+DROP POLICY IF EXISTS shared_upd ON orders;
+DROP POLICY IF EXISTS shared_del ON orders;
+CREATE POLICY shared_read ON orders FOR SELECT USING (fin.can_read(user_id, from_acc) OR fin.can_read(user_id, to_acc));
+CREATE POLICY shared_ins  ON orders FOR INSERT WITH CHECK (fin.can_write(user_id, from_acc) OR fin.can_write(user_id, to_acc));
+CREATE POLICY shared_upd  ON orders FOR UPDATE USING (fin.can_write(user_id, from_acc) OR fin.can_write(user_id, to_acc))
+                                              WITH CHECK (fin.can_write(user_id, from_acc) OR fin.can_write(user_id, to_acc));
+CREATE POLICY shared_del  ON orders FOR DELETE USING (fin.can_write(user_id, from_acc) OR fin.can_write(user_id, to_acc));
+
+DROP POLICY IF EXISTS shared_read ON order_skips;
+DROP POLICY IF EXISTS shared_ins ON order_skips;
+DROP POLICY IF EXISTS shared_del ON order_skips;
+CREATE POLICY shared_read ON order_skips FOR SELECT USING (EXISTS (SELECT 1 FROM fin.orders o WHERE o.user_id = order_skips.user_id AND o.id = order_skips.order_id
+  AND (fin.can_read(o.user_id, o.from_acc) OR fin.can_read(o.user_id, o.to_acc))));
+CREATE POLICY shared_ins ON order_skips FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM fin.orders o WHERE o.user_id = order_skips.user_id AND o.id = order_skips.order_id
+  AND (fin.can_write(o.user_id, o.from_acc) OR fin.can_write(o.user_id, o.to_acc))));
+CREATE POLICY shared_del ON order_skips FOR DELETE USING (EXISTS (SELECT 1 FROM fin.orders o WHERE o.user_id = order_skips.user_id AND o.id = order_skips.order_id
+  AND (fin.can_write(o.user_id, o.from_acc) OR fin.can_write(o.user_id, o.to_acc))));
+
+-- Namen und Adressen zu den Freigaben (Benutzertabelle ist sonst gesperrt)
+CREATE OR REPLACE FUNCTION fin.share_list()
+RETURNS TABLE (id uuid, dir text, owner_id uuid, owner_name text, owner_email text, account_id text, account_name text,
+               grantee_email text, grantee_name text, grantee_id uuid, perm text, created_at timestamptz)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = fin, public AS $$
+  SELECT s.id, CASE WHEN s.owner_id = fin.uid() THEN 'out' ELSE 'in' END, s.owner_id, o.name, o.email::text, s.account_id, a.name,
+         s.grantee_email::text, g.name, s.grantee_id, s.perm, s.created_at
+  FROM fin.account_shares s JOIN fin.users o ON o.id = s.owner_id JOIN fin.accounts a ON a.user_id = s.owner_id AND a.id = s.account_id
+  LEFT JOIN fin.users g ON g.id = s.grantee_id
+  WHERE s.owner_id = fin.uid() OR s.grantee_id = fin.uid()
+  ORDER BY a.name, s.grantee_email
+$$;
+
+CREATE OR REPLACE FUNCTION fin.share_user_by_email(p_email text)
+RETURNS TABLE (id uuid, name text) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = fin, public AS
+$$ SELECT u.id, u.name FROM fin.users u WHERE u.email = p_email::citext AND fin.uid() IS NOT NULL $$;
+
+-- offene Einladungen nach (bestätigter) Registrierung zuordnen
+CREATE OR REPLACE FUNCTION fin.share_attach(p_user uuid)
+RETURNS int LANGUAGE sql SECURITY DEFINER SET search_path = fin, public AS $$
+  WITH u AS (UPDATE fin.account_shares s SET grantee_id = p_user
+             FROM fin.users x WHERE x.id = p_user AND s.grantee_email = x.email AND s.grantee_id IS NULL RETURNING 1)
+  SELECT count(*)::int FROM u
+$$;
+
+CREATE OR REPLACE FUNCTION fin.share_pending(p_email text) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = fin, public AS
+$$ SELECT EXISTS (SELECT 1 FROM fin.account_shares WHERE grantee_email = p_email::citext AND grantee_id IS NULL) $$;
+
+-- Stand-Zähler des Besitzers erhöhen, wenn ein Empfänger schreibt (damit seine Geräte neu laden)
+CREATE OR REPLACE FUNCTION fin.share_touch(p_owner uuid) RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = fin, public AS $$
+  UPDATE fin.users SET rev = rev + 1 WHERE id = p_owner
+    AND (p_owner = fin.uid() OR EXISTS (SELECT 1 FROM fin.account_shares s WHERE s.owner_id = p_owner AND s.grantee_id = fin.uid()));
+$$;
+
+-- Stand der geteilten Konten für den Abruf „hat sich etwas geändert?“
+CREATE OR REPLACE FUNCTION fin.shared_rev() RETURNS text LANGUAGE sql STABLE SECURITY DEFINER SET search_path = fin, public AS $$
+  SELECT coalesce(string_agg(s.id::text || ':' || u.rev::text || ':' || s.perm, ',' ORDER BY s.id), '')
+  FROM fin.account_shares s JOIN fin.users u ON u.id = s.owner_id WHERE s.grantee_id = fin.uid()
+$$;
+
+REVOKE ALL ON FUNCTION fin.share_list(), fin.share_user_by_email(text), fin.share_attach(uuid), fin.share_pending(text),
+  fin.share_touch(uuid), fin.shared_rev() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION fin.share_list(), fin.share_user_by_email(text), fin.share_attach(uuid), fin.share_pending(text),
+  fin.share_touch(uuid), fin.shared_rev() TO finanzen_app;
+
 RESET ROLE;
 
 -- Schemaversion (für spätere Migrationen)
 CREATE TABLE IF NOT EXISTS fin.meta (key text PRIMARY KEY, value text NOT NULL);
 ALTER TABLE fin.meta OWNER TO finanzen_owner;
-INSERT INTO fin.meta VALUES ('schema_version', '3') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+INSERT INTO fin.meta VALUES ('schema_version', '4') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 GRANT SELECT ON fin.meta TO finanzen_app;

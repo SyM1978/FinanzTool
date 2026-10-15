@@ -64,6 +64,20 @@ Python/FastAPI, PostgreSQL 16 mit Row-Level Security, jede Person mit eigenem Lo
 
 Nur mit Einladung: `REGISTRATION=invite` plus `INVITE_CODE`. Keine neuen Konten mehr: `REGISTRATION=closed`.
 
+### Konten teilen
+
+Unter *Einstellungen › Konten teilen* gibst du ein einzelnes Konto per E-Mail-Adresse frei, z. B. das Haushaltskonto für deine Partnerin.
+
+| Recht | Was die andere Person darf |
+|---|---|
+| **ansehen und buchen** | Buchungen und Daueraufträge auf diesem Konto anlegen, ändern und löschen |
+| **nur ansehen** | Konto, Buchungen und Prognose sehen, nichts ändern |
+
+- **Wem es gehört:** Name, Startwert und Einstellungen des Kontos ändert nur der Besitzer. Alle anderen Daten (andere Konten, Depot, Finanzplan) bleiben privat.
+- **Einladung:** Hat die Adresse noch kein Benutzerkonto, geht eine Einladung raus. Die Person darf sich damit auch bei `REGISTRATION=closed` registrieren. Die Freigabe greift erst, wenn die Adresse bestätigt ist.
+- **Zurücknehmen und verlassen:** Freigaben lassen sich jederzeit zurücknehmen oder ändern. Die andere Person kann sie selbst verlassen.
+- **Technik:** Die Daten bleiben beim Besitzer. Zusätzliche Row-Level-Security-Regeln in PostgreSQL erlauben den Zugriff auf genau dieses Konto.
+
 ### Sicherung zurückspielen
 
 ```bash
