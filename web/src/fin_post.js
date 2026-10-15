@@ -8,6 +8,7 @@ function start(){
 function summary(){
   var res=compute(D),tk=todayKey(),t=parseKey(tk),y=t.getFullYear(),m=t.getMonth(),out={accounts:[],tk:tk};
   D.accounts.forEach(function(a){
+    if(loanGone(a))return;
     var f=forecast(D,a);
     out.accounts.push({id:a.id,name:a.name,kind:a.kind,kindLabel:KINDS[a.kind],color:a.color,loan:isLoan(a),now:f.now,month:f.month,year:f.year,
       paid:f.paid,orig:a.loan&&a.loan.orig||(isLoan(a)?-a.start.amount:0),goal:a.goal&&a.goal.amount>0?a.goal.amount:0,goalDate:f.goalDate,goalReached:!!f.goalReached,

@@ -108,7 +108,6 @@ H_DATE = "Der Tag, an dem die Restschuld galt. Am besten der Tag nach der letzte
 H_RATE = "Im Vertrag stehen meist zwei Zinssätze:\n\n• Gebundener Sollzins: der reine Zins pro Jahr. Damit rechnet die Bank die monatlichen Zinsen.\n• Effektiver Jahreszins: etwas höher, weil er den Zinseszins der monatlichen Zahlung (und ggf. Gebühren) enthält.\n\nWähl aus, welchen du einträgst. Den effektiven rechnet die App in den Sollzins um."
 H_PAY = "Der Betrag, der jeden Monat abgebucht wird. Darin stecken Zinsen und Tilgung.\n\nDie App legt dafür einen Dauerauftrag vom gewählten Konto an."
 H_DAY = "Tag im Monat, an dem die Rate abgebucht wird. An diesem Tag werden auch die Zinsen berechnet.\n\nFällt er aufs Wochenende oder einen Feiertag, rückt die Buchung auf den nächsten Bankarbeitstag."
-H_FROM = "Konto, von dem die Rate abgeht, meist das Girokonto. Dort erscheint sie als geplante Ausgabe in der Prognose."
 H_ORIG = "Der Nettodarlehensbetrag laut Vertrag, also was ausgezahlt wurde, ohne Zinsen.\n\nWird nur für die Anzeige „x % getilgt“ gebraucht. Leer lassen geht auch."
 f_ui4 = rep(f_ui4, '$("aStartLbl").textContent=l?"Restschuld (€)":"Startwert (€)";$("aStartDateLbl").textContent=l?"Restschuld zu Beginn des":"Stand zu Beginn des"}',
   '$("aStartLbl").innerHTML=l?"Restschuld (€) "+' + repr(hlp(H_REST)) + ':"Startwert (€)";$("aStartDateLbl").innerHTML=l?"Restschuld am "+' + repr(hlp(H_DATE)) + ':"Stand zu Beginn des";loanCheck()}', where="loan kindui")
@@ -120,6 +119,31 @@ f_ui4 = rep(f_ui4, 'setMsg("accMsg","Sollzins bitte als Zahl, z. B. 3,85.",true)
 f_ui4 = rep(f_ui4, '    if(a.loan)a.loan=null;\n', '    if(a.loan)a.loan=null;delete a.loanEff;\n', where="loan save3")
 f_ui3 = rep(f_ui3, '$("loanMeta").innerHTML=L.rate?"Sollzins <b>"+fmtRate(L.rate)+" %</b>":"";',
   '$("loanMeta").innerHTML=a.loanEff?"effektiv <b>"+fmtPct(a.loanEff)+" %</b> · Sollzins "+fmtPct(L.rate,3)+" %":L.rate?"Sollzins <b>"+fmtPct(L.rate,3)+" %</b>":"";', where="loan meta")
+# Einfache Kredite: Rate ohne Konto, nach der Tilgung ausblenden
+H_HIDE = "Ist der Kredit abbezahlt, verschwindet er aus Übersicht, Konten, Krediten, Daueraufträgen und Dashboard.\n\nUnter Einstellungen › Konten bleibt er sichtbar, dort kannst du ihn auch ganz löschen."
+H_FROM = "Konto, von dem die Rate abgeht, meist das Girokonto. Dort erscheint sie als geplante Ausgabe in der Prognose.\n\n„kein Konto“: Die Rate wird nur beim Kredit abgezogen, kein anderes Konto ist betroffen. Gut für einfache Kredite, z. B. eine Ratenzahlung."
+f_helpers = rep(f_helpers, 'var h=withExtern?\'<option value="">Extern</option>\':"";', 'var h=withExtern?\'<option value="">\'+(withExtern===2?"kein Konto (Rate nicht verbuchen)":"Extern")+"</option>":"";', where="accopts label")
+f_ui4 = rep(f_ui4, 'var pf=$("aPayFrom").value;accOpts($("aPayFrom"),true,', 'var pf=$("aPayFrom").value;accOpts($("aPayFrom"),2,', where="payfrom opts1")
+f_ui4 = rep(f_ui4, 'if(D){accOpts($("aPayFrom"),true,', 'if(D){accOpts($("aPayFrom"),2,', where="payfrom opts2")
+f_ui4 = rep(f_ui4, '$("aKind").value="giro";$("aRateType").value="eff";', '$("aKind").value="giro";$("aRateType").value="eff";$("aLoanHide").checked=true;', where="hide reset")
+f_ui4 = rep(f_ui4, '$("aRateType").value=a.loanEff?"eff":"nom";', '$("aRateType").value=a.loanEff?"eff":"nom";$("aLoanHide").checked=!!a.loanHide;', where="hide edit")
+f_ui4 = rep(f_ui4, 'if(RI.eff!=null)a.loanEff=RI.eff;else delete a.loanEff;', 'if(RI.eff!=null)a.loanEff=RI.eff;else delete a.loanEff;if($("aLoanHide").checked)a.loanHide=true;else delete a.loanHide;', where="hide save")
+f_ui4 = rep(f_ui4, 'if(a.loan)a.loan=null;delete a.loanEff;', 'if(a.loan)a.loan=null;delete a.loanEff;delete a.loanHide;', where="hide save2")
+f_ui4 = rep(f_ui4, 'var f=forecast(D,a),x=[KINDS[a.kind],"Stand "+eur(f.now)];', 'var f=forecast(D,a),x=[KINDS[a.kind],"Stand "+eur(f.now)];if(loanGone(a))x=[KINDS[a.kind],"getilgt am "+dmy(f.paid),"ausgeblendet"];', where="hide setlist")
+f_ui2 = rep(f_ui2, '$("nmAcc").textContent=D.accounts.length||"";', '$("nmAcc").textContent=shownAccs().length||"";', where="hide nmacc")
+f_ui2 = rep(f_ui2, 'var nl=D.accounts.filter(isLoan).length;', 'var nl=loansShown().length;', where="hide nmloan")
+f_ui2 = rep(f_ui2, '  D.accounts.forEach(function(a){\n    if(isLoan(a)){', '  D.accounts.forEach(function(a){\n    if(loanGone(a))return;\n    if(isLoan(a)){', where="hide alerts")
+f_ui2 = rep(f_ui2, '$("tiles").innerHTML=D.accounts.map(', '$("tiles").innerHTML=shownAccs().map(', where="hide tiles")
+f_ui2 = rep(f_ui2, '$("sumTiles").textContent=D.accounts.length?D.accounts.length+" Konten":"";', 'var shn=shownAccs().length;$("sumTiles").textContent=shn?shn+" Konten":"";', where="hide sumtiles")
+f_ui2 = rep(f_ui2, '$("accPick").innerHTML=D.accounts.map(', '$("accPick").innerHTML=shownAccs().filter(function(x){return x.id===a.id||!loanGone(x)}).map(', where="hide accpick")
+f_ui2 = rep(f_ui2, 'a=D.accounts.filter(function(x){return !isLoan(x)})[0]||D.accounts[0]||null;', 'a=D.accounts.filter(function(x){return !isLoan(x)})[0]||shownAccs()[0]||null;', where="hide curacc")
+f_ui3 = rep(f_ui3, '.concat(D.accounts.map(function(a){return \'<button type="button" data-of=', '.concat(shownAccs().map(function(a){return \'<button type="button" data-of=', where="hide ordfilter")
+f_ui3 = rep(f_ui3, 'var list=D.orders.filter(function(o){return !f||o.from===f||o.to===f})', 'var list=D.orders.filter(function(o){return (!f||o.from===f||o.to===f)&&!loanGone(accById(D,o.to))})', where="hide orders")
+f_ui3 = rep(f_ui3, 'function curLoan(){var l=D.accounts.filter(isLoan),', 'function curLoan(){var l=loansShown(),', where="hide curloan")
+f_ui3 = rep(f_ui3, 'var a=curLoan(),l=D.accounts.filter(isLoan);', 'var a=curLoan(),l=loansShown();', where="hide loans")
+f_ui3 = rep(f_ui3, '$("loanNone").hidden=!!a;', '$("loanNone").hidden=!!a;if(!a){var gn=D.accounts.filter(loanGone).length;if(ui.loanNoneH==null)ui.loanNoneH=$("loanNone").innerHTML;$("loanNone").innerHTML=gn?(gn===1?"Dein Kredit ist getilgt und ausgeblendet. Du findest ihn":"Alle "+gn+" Kredite sind getilgt und ausgeblendet. Du findest sie")+\' weiter unter <button class="linkbtn" type="button" data-go="einstellungen#konten">Einstellungen › Konten</button>.\':ui.loanNoneH}', where="hide loannone")
+f_ui2 = rep(f_ui2, '$("nmOrd").textContent=D.orders.length||"";', '$("nmOrd").textContent=shownOrders().length||"";', where="hide nmord")
+f_ui3 = rep(f_ui3, '$("ordMeta").textContent=D.orders.length?D.orders.length+" Aufträge":"";', 'var sho=shownOrders().length;$("ordMeta").textContent=sho?sho+" Aufträge":"";', where="hide ordmeta")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_loan.js")
 
 fin_js = ("var FIN=(function(SH){\n\"use strict\";\n" + f_core + "\n" + rd(SRC, "fin_pre.js").replace("/*UI*/", f_ui) + "\n" + f_helpers + "\n"
@@ -242,6 +266,7 @@ f_body = rep(f_body, '<label for="aPayFrom">Rate kommt von</label>', '<label for
 f_body = rep(f_body, '<label for="aOrig">Ursprünglicher Betrag (optional)</label>', '<label for="aOrig">Ausgezahlter Betrag (optional) ' + hlp(H_ORIG) + '</label>', where="loan orig")
 f_body = rex(f_body, r'<p class="hintline span2">Restschuld als Startwert eintragen \(positiv\)\.[^<]*</p>',
   '<div class="loancheck" id="aLoanCheck" aria-live="polite"></div>', where="loan hint")
+f_body = rep(f_body, '<div class="loancheck" id="aLoanCheck" aria-live="polite"></div>', '<label class="check loanhide"><input type="checkbox" id="aLoanHide" checked> Nach der Tilgung ausblenden ' + hlp(H_HIDE) + '</label><div class="loancheck" id="aLoanCheck" aria-live="polite"></div>', where="loan hide")
 
 
 

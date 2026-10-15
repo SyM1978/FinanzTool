@@ -5,7 +5,7 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.6.0",VDATE="2026-10-15";
+var VERSION="1.7.0",VDATE="2026-10-15";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};

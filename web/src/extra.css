@@ -172,3 +172,4 @@ tr.grp .mkdot{margin-right:8px;cursor:default}
 .lnfix .btn{padding:5px 12px}
 .lnprev{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px}
 .lnprev .hintline{grid-column:1/-1}
+.loanhide{grid-column:1/-1}

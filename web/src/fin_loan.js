@@ -73,3 +73,9 @@ document.addEventListener("click",function(e){
   setMsg("accMsg","Restschuld übernommen. Bitte mit dem Kontoauszug vergleichen und dann speichern.");
 });
 ["aStart","aStartDate","aRate","aRateType","aPay","aPayDay","aOrig","aKind"].forEach(function(id){var el=$(id);if(!el)return;el.addEventListener("input",loanCheck);el.addEventListener("change",loanCheck)});
+
+/* ---------- Getilgte Kredite ausblenden (Option „Nach der Tilgung ausblenden“) ---------- */
+function loanGone(a){if(!a||!isLoan(a)||!a.loanHide)return false;var r=compute(D).acc[a.id];return !!(r&&r.paid&&r.paid<=todayKey())}
+function shownAccs(){return D.accounts.filter(function(a){return !loanGone(a)})}
+function loansShown(){return D.accounts.filter(function(a){return isLoan(a)&&!loanGone(a)})}
+function shownOrders(){return D.orders.filter(function(o){return !loanGone(accById(D,o.to))})}
