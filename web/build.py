@@ -171,6 +171,23 @@ d_calc2 = rep(d_calc2, '  if(a.type==="dayUp")return ch>=Math.abs(v);', '  if(a.
 d_ui3 = rep(d_ui3, 'depOpts($("eDepot"),false);$("eDepot").value=p.depot||defaultDepot(D);', 'depOpts($("eDepot"),false);$("eDepot").value=p.depot||defaultDepot(D);\n  if(document.activeElement!==$("eCat"))$("eCat").value=p.cat||"";$("catPosList").innerHTML=catList().map(function(k){return \'<option value="\'+esc(k)+\'">\'}).join("");', where="dep ecat fill")
 d_ui3 = rep(d_ui3, ':ui.alloc==="cur"?(r.cur==="GBp"?"GBP":r.cur||"EUR"):PKIND', ':ui.alloc==="cur"?(r.cur==="GBp"?"GBP":r.cur||"EUR"):ui.alloc==="cat"?(r.p.cat||"Ohne Kategorie"):PKIND', where="dep alloc cat")
 
+# Dividenden: optionales Referenzkonto je Position und je Buchung
+d_ui2 = rep(d_ui2, 'document.querySelector("#dpTxForm .td").hidden=v!=="div";',
+  'document.querySelector("#dpTxForm .td").hidden=v!=="div";document.querySelector("#dpTxForm .tdacc").hidden=v!=="div";if(v==="div"){var cp=curPos(),et=ui.editTx&&cp?cp.tx.filter(function(x){return x.id===ui.editTx})[0]:null,sv=$("tDivAcc").getAttribute("data-v");SH.divAccOptions($("tDivAcc"),cp,"tx",sv!=null?sv:(et&&et.acc)||"")}', where="div acc toggle")
+d_ui2 = rep(d_ui2, '["tQty","tPrice","tFee","tAmt"].forEach(function(id){$(id).value=""});$("tDate").value=todayKey();setTxType("buy");',
+  '["tQty","tPrice","tFee","tAmt"].forEach(function(id){$(id).value=""});$("tDivAcc").setAttribute("data-v","");$("tDate").value=todayKey();setTxType("buy");', where="div acc reset")
+d_ui2 = rep(d_ui2, '  setTxType(t.type);$("tDate").value=t.date;',
+  '  $("tDivAcc").setAttribute("data-v",t.acc||"");setTxType(t.type);$("tDate").value=t.date;', where="div acc edit")
+d_ui2 = rep(d_ui2, '$("txType").addEventListener("change",function(){setTxType(txType())});',
+  '$("txType").addEventListener("change",function(){setTxType(txType())});\n$("tDivAcc").addEventListener("change",function(){$("tDivAcc").setAttribute("data-v",$("tDivAcc").value)});', where="div acc change")
+d_ui2 = rep(d_ui2, 'amount:ty==="div"?am:0,u:now()});',
+  'amount:ty==="div"?am:0,u:now()});var da=ty==="div"?$("tDivAcc").value:"";if(da)t.acc=da;else delete t.acc;', where="div acc save")
+d_ui2 = rep(d_ui2, 'tabindex="0"><td>\'+dmy(t.date)+\'</td><td><span class="tag \'+(t.type==="buy"?"ok":t.type==="sell"?"edit":"fee")+\'">\'+TXT[t.type]+\'</span></td>', 'tabindex="0"><td>\'+dmy(t.date)+\'</td><td><span class="tag \'+(t.type==="buy"?"ok":t.type==="sell"?"edit":"fee")+\'">\'+TXT[t.type]+\'</span>\'+(t.type==="div"&&SH.divAccLabel(p,t)?\'<small class="txacc">\'+esc(SH.divAccLabel(p,t))+"</small>":"")+\'</td>', where="div acc list")
+d_ui2 = rep(d_ui2, 'var cv=$("eCat").value.trim().slice(0,30);if(cv)p.cat=cv;else delete p.cat;',
+  'var cv=$("eCat").value.trim().slice(0,30);if(cv)p.cat=cv;else delete p.cat;var dv=$("eDivAcc").value;if(dv)p.divAcc=dv;else delete p.divAcc;', where="pedit divacc save")
+d_ui3 = rep(d_ui3, 'if(document.activeElement!==$("eCat"))$("eCat").value=p.cat||"";',
+  'if(document.activeElement!==$("eCat"))$("eCat").value=p.cat||"";if(document.activeElement!==$("eDivAcc"))SH.divAccOptions($("eDivAcc"),p,"pos",p.divAcc||"");if(txType()==="div"&&document.activeElement!==$("tDivAcc"))SH.divAccOptions($("tDivAcc"),p,"tx",$("tDivAcc").getAttribute("data-v")||"");', where="pedit divacc fill")
+
 # Mail-Alarme laufen über den Server (Konto des Nutzers)
 d_ui3 = cut(d_ui3, "/* ---------- E-Mail-Alarme: Abgleich mit dem Webspace ---------- */", "/* ---------- Sparpläne ---------- */", "dep mail")
 d_ui3 = d_ui3.replace("/* ---------- Sparpläne ---------- */", rd(SRC, "dep_mail.js") + "\n/* ---------- Sparpläne ---------- */", 1)
@@ -247,6 +264,11 @@ d_html = rep(d_html, '<option value="dayDown">heute fällt um mindestens (%)</op
 d_html = rep(d_html, '<button class="btn primary" type="submit">Alarm anlegen</button>', '<button class="btn primary" type="submit" id="alGo">Alarm anlegen</button><button class="btn danger" type="button" id="alDelAll">Alle Alarme löschen</button>', where="al go")
 d_html = rep(d_html, '<div class="field"><label for="eDepot">Depot</label><select id="eDepot"></select></div>',
   '<div class="field"><label for="eDepot">Depot</label><select id="eDepot"></select></div><div class="field"><label for="eCat">Kategorie</label><input type="text" id="eCat" maxlength="30" list="catPosList" placeholder="z. B. Dividende, Wachstum"><datalist id="catPosList"></datalist></div>', where="pedit cat")
+d_html = rep(d_html, '<div class="field"><label for="eCat">Kategorie</label>',
+  '<div class="field"><label for="eDivAcc">Dividenden auf Konto (optional)</label><select id="eDivAcc"></select></div><div class="field"><label for="eCat">Kategorie</label>', where="pedit divacc")
+d_html = rep(d_html, '<div class="field td" hidden><label for="tAmt">Betrag (€)</label><input type="text" id="tAmt" class="amtin" inputmode="decimal" placeholder="brutto"></div>',
+  '<div class="field td" hidden><label for="tAmt">Betrag (€)</label><input type="text" id="tAmt" class="amtin" inputmode="decimal" placeholder="brutto"></div>'
+  '<div class="field tdacc" hidden><label for="tDivAcc">Gutschrift auf Konto (optional)</label><select id="tDivAcc"></select></div>', where="div acc field")
 d_html = rep(d_html, '<label><input type="radio" name="alm" value="kind"><span>Art</span></label>', '<label><input type="radio" name="alm" value="kind"><span>Art</span></label>\n          <label><input type="radio" name="alm" value="cat"><span>Kategorie</span></label>', where="alloc cat")
 d_html = rep(d_html, '<span class="smeta" id="sumRows"></span></summary>\n        <div class="tablewrap"><table class="postab">', '<span class="smeta" id="sumRows"></span></summary>\n        <div class="postools"><label for="posGroup">Gruppieren</label><select id="posGroup"><option value="">nicht gruppieren</option><option value="cat">nach Kategorie</option><option value="mark">nach Markierung</option></select><span class="hint">Kategorie: im Namen auf „+ Kategorie“ tippen</span></div><div class="tablewrap"><table class="postab">', where="pos tools")
 dep_views = views(d_html, ["depot", "position", "zeitung", "watchlist", "alarme", "neu", "dauswertung"], "dep")

@@ -5,7 +5,7 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.4.0",VDATE="2026-10-14";
+var VERSION="1.5.0",VDATE="2026-10-15";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
@@ -174,12 +174,15 @@ function reconcileCash(){
   (D.settings.depots||[]).forEach(function(d){deps[d.id]=d});
   var def=(D.settings.depots||[])[0];
   D.pos.forEach(function(p){
-    var dep=deps[p.depot]||def;if(!dep||!dep.cash_acc||!accs[dep.cash_acc])return;
+    var dep=deps[p.depot]||def,cash=dep&&dep.cash_acc&&accs[dep.cash_acc]?dep.cash_acc:"";
     (p.tx||[]).forEach(function(t){
-      if(dep.cash_from&&t.date<dep.cash_from)return;
+      var acc=cash,expl=false;
+      if(t.type==="div"){var r=divTarget(p,t,dep,accs);if(r.explicit){acc=r.acc;expl=true}}
+      if(!acc)return;
+      if(!expl&&dep.cash_from&&t.date<dep.cash_from)return;
       var q=+t.qty||0,px=+t.price||0,fee=+t.fee||0,amt=t.type==="buy"?-Math.round((q*px+fee)*100):t.type==="sell"?Math.round((q*px-fee)*100):Math.round((+t.amount||0)*100);
       if(!amt)return;
-      want["sx_"+t.id]={id:"sx_"+t.id,acc:dep.cash_acc,date:t.date,amount:amt,text:DEPm.txLabel(t)+" "+p.name+(t.type!=="div"?" ("+NFQ.format(q)+" Stk.)":""),cat:t.type==="div"?"Dividenden":"Wertpapiere",sec_tx:t.id};
+      want["sx_"+t.id]={id:"sx_"+t.id,acc:acc,date:t.date,amount:amt,text:DEPm.txLabel(t)+" "+p.name+(t.type!=="div"?" ("+NFQ.format(q)+" Stk.)":""),cat:t.type==="div"?"Dividenden":"Wertpapiere",sec_tx:t.id};
     });
   });
   var seen={};
@@ -192,6 +195,31 @@ function reconcileCash(){
   });
   Object.keys(want).forEach(function(id){if(!seen[id]){D.tx.push(Object.assign({},want[id],{u:Date.now()}));changedAny=true}});
   return changedAny;
+}
+/* Referenzkonto für Dividenden: Buchung → Position → Verrechnungskonto des Depots.
+   "-" heißt ausdrücklich: nicht auf ein Konto buchen. */
+function divTarget(p,t,dep,accs){
+  var v=t&&t.acc;if(v==="-")return {acc:"",explicit:true,src:"tx"};if(v&&accs[v])return {acc:v,explicit:true,src:"tx"};
+  v=p&&p.divAcc;if(v==="-")return {acc:"",explicit:true,src:"pos"};if(v&&accs[v])return {acc:v,explicit:true,src:"pos"};
+  return {acc:dep&&dep.cash_acc&&accs[dep.cash_acc]?dep.cash_acc:"",explicit:false,src:"dep"};
+}
+function accMap(){var m={};FINm.accounts().forEach(function(a){m[a.id]=a});return m}
+function depOf(p){var ds=D.settings.depots||[];return ds.filter(function(d){return d.id===p.depot})[0]||ds[0]}
+function accName(id,m){return id&&m[id]?m[id].name:""}
+/* Auswahlliste füllen. level "pos": Standard = Verrechnungskonto des Depots; level "tx": Standard = Einstellung der Position */
+function divAccOptions(sel,p,level,val){
+  if(!sel||!D)return;var m=accMap(),dep=depOf(p),def;
+  if(level==="tx"){var r=divTarget(p,null,dep,m);def=r.acc?"wie Position (→ "+accName(r.acc,m)+")":"wie Position (keine Gutschrift)"}
+  else{var c=dep&&dep.cash_acc&&m[dep.cash_acc];def=c?"wie Depot (→ "+c.name+")":"wie Depot (kein Verrechnungskonto)"}
+  var h='<option value="">'+esc(def)+'</option><option value="-">nicht auf ein Konto buchen</option>';
+  FINm.accounts().forEach(function(a){h+='<option value="'+esc(a.id)+'">→ '+esc(a.name)+"</option>"});
+  sel.innerHTML=h;sel.value=val&&(val==="-"||m[val])?val:"";
+}
+function divAccLabel(p,t){
+  if(!D)return "";var m=accMap(),r=divTarget(p,t,depOf(p),m);
+  if(!r.acc)return r.explicit?"keine Gutschrift":"";
+  var dep=depOf(p);if(!r.explicit&&dep&&dep.cash_from&&t&&t.date<dep.cash_from)return "";
+  return "→ "+accName(r.acc,m);
 }
 function cashPicker(dep){
   var accs=FINm.accounts(),h='<span class="cashpick"><select data-depacc="'+esc(dep.id)+'" aria-label="Verrechnungskonto für '+esc(dep.name)+'"><option value="">ohne Verrechnungskonto</option>';
@@ -663,6 +691,6 @@ function boot(){
 }
 
 return {VERSION:VERSION,VDATE:VDATE,$:$,esc:esc,P:P,VIEWS:VIEWS,api:api,boot:boot,changed:changed,showView:showView,setDrawer:setDrawer,applyLook:applyLook,applySect:applySect,
-  setMsg:setMsg,armed:armed,download:download,sessionLost:sessionLost,refreshMe:refreshMe,user:function(){return USER},cashPicker:cashPicker,
+  setMsg:setMsg,armed:armed,download:download,sessionLost:sessionLost,refreshMe:refreshMe,user:function(){return USER},cashPicker:cashPicker,divAccOptions:divAccOptions,divAccLabel:divAccLabel,
   depotValue:function(){return DEPm?DEPm.value():null},sharedBadge:sharedBadge,preview:PREVIEW,_D:function(){return D},_export:function(){return toExport(D)},_sync:SYNC,_pending:pending,_push:pushNow};
 })();

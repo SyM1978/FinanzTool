@@ -149,3 +149,4 @@ tr.grp .mkdot{margin-right:8px;cursor:default}
 #shOut .acts,#shIn .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 #shOutWrap,#shInWrap{display:flex;flex-direction:column;gap:4px;margin-top:8px}
 #shOutWrap[hidden],#shInWrap[hidden]{display:none}
+.txacc{display:block;font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap}
