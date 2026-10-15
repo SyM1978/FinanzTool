@@ -150,3 +150,25 @@ tr.grp .mkdot{margin-right:8px;cursor:default}
 #shOutWrap,#shInWrap{display:flex;flex-direction:column;gap:4px;margin-top:8px}
 #shOutWrap[hidden],#shInWrap[hidden]{display:none}
 .txacc{display:block;font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap}
+/* Hilfe-Infos */
+.hlp{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:4px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);color:var(--muted);font-size:11px;font-weight:700;line-height:1;font-family:inherit;cursor:help;vertical-align:1px;position:relative}
+.hlp::before{content:"";position:absolute;inset:-8px}
+.hlp:hover,.hlp:focus-visible,.hlp[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);outline:none}
+.hlp:focus-visible{box-shadow:0 0 0 3px var(--accent-soft)}
+.tipbox{position:fixed;z-index:1000;background:var(--ink);color:var(--surface);font-size:14px;line-height:1.55;padding:12px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);white-space:pre-line;pointer-events:auto}
+.tipbox::after{content:"";position:absolute;left:calc(var(--ax,50%) - 7px);width:14px;height:14px;background:inherit;transform:rotate(45deg);border-radius:2px}
+.tipbox[data-pos="below"]::after{top:-6px}
+.tipbox[data-pos="above"]::after{bottom:-6px}
+/* Kredit-Maske */
+.ratein{display:flex;gap:8px}
+.ratein input{flex:1 1 90px;min-width:0}
+.ratein select{flex:1 1 150px;min-width:0}
+.rateconv{display:block;min-height:1.2em;font-size:12.5px;color:var(--muted);margin-top:4px}
+.loancheck{grid-column:1/-1;display:flex;flex-direction:column;gap:10px}
+.loancheck:empty{display:none}
+.lnwarn{background:var(--warn-soft);color:var(--ink);border-left:4px solid var(--warn);border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.5}
+.lnwarn small{display:block;color:var(--muted);margin-top:6px;font-size:12.5px}
+.lnfix{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:8px}
+.lnfix .btn{padding:5px 12px}
+.lnprev{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px}
+.lnprev .hintline{grid-column:1/-1}

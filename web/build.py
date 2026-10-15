@@ -99,6 +99,29 @@ f_ui4 = rep(f_ui4, "function clearDemo(){var s=D.settings;D=newData();D.settings
             'function clearDemo(){var n=newData();["plan","accounts","orders","tx","skips"].forEach(function(k){D[k]=n[k]});D.demo=false;touch()}', where="fin clearDemo")
 f_ui4 = f_ui4[:f_ui4.index("/* ---------- Version & Start ---------- */")]
 
+
+# Kredit-Maske: Effektiv-/Sollzins, Hilfe-Infos, Plausibilitätsprüfung
+def hlp(t):
+    return '<button type="button" class="hlp" aria-label="Hilfe" data-tip="' + t.replace('"', "&quot;") + '">?</button>'
+H_REST = "Was du der Bank an diesem Tag noch schuldest. Steht im Kontoauszug oder Online-Banking des Kredits als „Restschuld“ oder „Saldo“.\n\nNicht den Gesamtbetrag aus dem Vertrag eintragen: Der enthält schon alle künftigen Zinsen."
+H_DATE = "Der Tag, an dem die Restschuld galt. Am besten der Tag nach der letzten abgebuchten Rate.\n\nAb hier rechnet die App jeden Monat Zinsen und Rate selbst weiter."
+H_RATE = "Im Vertrag stehen meist zwei Zinssätze:\n\n• Gebundener Sollzins: der reine Zins pro Jahr. Damit rechnet die Bank die monatlichen Zinsen.\n• Effektiver Jahreszins: etwas höher, weil er den Zinseszins der monatlichen Zahlung (und ggf. Gebühren) enthält.\n\nWähl aus, welchen du einträgst. Den effektiven rechnet die App in den Sollzins um."
+H_PAY = "Der Betrag, der jeden Monat abgebucht wird. Darin stecken Zinsen und Tilgung.\n\nDie App legt dafür einen Dauerauftrag vom gewählten Konto an."
+H_DAY = "Tag im Monat, an dem die Rate abgebucht wird. An diesem Tag werden auch die Zinsen berechnet.\n\nFällt er aufs Wochenende oder einen Feiertag, rückt die Buchung auf den nächsten Bankarbeitstag."
+H_FROM = "Konto, von dem die Rate abgeht, meist das Girokonto. Dort erscheint sie als geplante Ausgabe in der Prognose."
+H_ORIG = "Der Nettodarlehensbetrag laut Vertrag, also was ausgezahlt wurde, ohne Zinsen.\n\nWird nur für die Anzeige „x % getilgt“ gebraucht. Leer lassen geht auch."
+f_ui4 = rep(f_ui4, '$("aStartLbl").textContent=l?"Restschuld (€)":"Startwert (€)";$("aStartDateLbl").textContent=l?"Restschuld zu Beginn des":"Stand zu Beginn des"}',
+  '$("aStartLbl").innerHTML=l?"Restschuld (€) "+' + repr(hlp(H_REST)) + ':"Startwert (€)";$("aStartDateLbl").innerHTML=l?"Restschuld am "+' + repr(hlp(H_DATE)) + ':"Stand zu Beginn des";loanCheck()}', where="loan kindui")
+f_ui4 = rep(f_ui4, '$("aKind").value="giro";$("aStartDate").value=todayKey();', '$("aKind").value="giro";$("aRateType").value="eff";$("aStartDate").value=todayKey();', where="loan reset")
+f_ui4 = rep(f_ui4, 'var L=a.loan||{},o=loanOrder(a);$("aRate").value=fmtRate(L.rate||"");',
+  'var L=a.loan||{},o=loanOrder(a);$("aRateType").value=a.loanEff?"eff":"nom";$("aRate").value=fmtRate(a.loanEff||L.rate||"");', where="loan edit")
+f_ui4 = rep(f_ui4, 'var rate=parseRate($("aRate").value),pay=opt("aPay")', 'var RI=loanRateIn(),rate=RI.raw==null?null:RI.nom,pay=opt("aPay")', where="loan save1")
+f_ui4 = rep(f_ui4, 'setMsg("accMsg","Sollzins bitte als Zahl, z. B. 3,85.",true);return}', 'setMsg("accMsg","Zinssatz bitte als Zahl, z. B. 5,24.",true);return}if(RI.eff!=null)a.loanEff=RI.eff;else delete a.loanEff;', where="loan save2")
+f_ui4 = rep(f_ui4, '    if(a.loan)a.loan=null;\n', '    if(a.loan)a.loan=null;delete a.loanEff;\n', where="loan save3")
+f_ui3 = rep(f_ui3, '$("loanMeta").innerHTML=L.rate?"Sollzins <b>"+fmtRate(L.rate)+" %</b>":"";',
+  '$("loanMeta").innerHTML=a.loanEff?"effektiv <b>"+fmtPct(a.loanEff)+" %</b> · Sollzins "+fmtPct(L.rate,3)+" %":L.rate?"Sollzins <b>"+fmtPct(L.rate,3)+" %</b>":"";', where="loan meta")
+f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_loan.js")
+
 fin_js = ("var FIN=(function(SH){\n\"use strict\";\n" + f_core + "\n" + rd(SRC, "fin_pre.js").replace("/*UI*/", f_ui) + "\n" + f_helpers + "\n"
           + f_ui2 + "\n" + f_ui3 + "\n" + f_ui4 + "\n" + rd(SRC, "fin_post.js") + "\n})(SH);\n")
 
@@ -211,6 +234,15 @@ dep_js = ("var DEP=(function(SH){\n\"use strict\";\n" + d_base + "\n" + d_calc +
 # Seite zusammensetzen
 # =====================================================================
 f_body, d_body = rd(FIN, "body.html"), rd(DEP, "body.html")
+f_body = rep(f_body, '<div class="field"><label for="aRate">Sollzins (% p. a.)</label><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 3,85"></div>',
+  '<div class="field span2"><label for="aRate">Zinssatz (% p. a.) ' + hlp(H_RATE) + '</label><span class="ratein"><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 5,24"><select id="aRateType" aria-label="Art des Zinssatzes"><option value="eff">effektiver Jahreszins</option><option value="nom">Sollzins (gebunden)</option></select></span><small class="rateconv" id="aRateConv" aria-live="polite"></small></div>', where="loan rate")
+f_body = rep(f_body, '<label for="aPay">Monatsrate (€)</label>', '<label for="aPay">Monatsrate (€) ' + hlp(H_PAY) + '</label>', where="loan pay")
+f_body = rep(f_body, '<label for="aPayDay">Fällig am</label>', '<label for="aPayDay">Fällig am ' + hlp(H_DAY) + '</label>', where="loan day")
+f_body = rep(f_body, '<label for="aPayFrom">Rate kommt von</label>', '<label for="aPayFrom">Rate kommt von ' + hlp(H_FROM) + '</label>', where="loan from")
+f_body = rep(f_body, '<label for="aOrig">Ursprünglicher Betrag (optional)</label>', '<label for="aOrig">Ausgezahlter Betrag (optional) ' + hlp(H_ORIG) + '</label>', where="loan orig")
+f_body = rex(f_body, r'<p class="hintline span2">Restschuld als Startwert eintragen \(positiv\)\.[^<]*</p>',
+  '<div class="loancheck" id="aLoanCheck" aria-live="polite"></div>', where="loan hint")
+
 
 
 def views(body, names, where):

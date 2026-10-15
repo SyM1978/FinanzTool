@@ -5,7 +5,7 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.5.0",VDATE="2026-10-15";
+var VERSION="1.6.0",VDATE="2026-10-15";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
@@ -237,6 +237,33 @@ document.addEventListener("change",function(e){
   var a=d.cash_acc&&FINm.accounts().filter(function(x){return x.id===d.cash_acc})[0];
   setMsg("depMsg",a?"Käufe, Verkäufe und Dividenden aus „"+d.name+"“"+(d.cash_from?" ab "+d.cash_from.split("-").reverse().join("."):"")+" werden auf „"+a.name+"“ gebucht.":"„"+d.name+"“ bucht nicht mehr auf ein Konto. Bisherige automatische Buchungen sind entfernt.");
 });
+
+/* ---------- Hilfe-Infos: [?]-Knöpfe mit data-tip (Maus, Tastatur und Touch) ---------- */
+var TIP={el:null,for:null,pinned:false,t:0};
+function tipBox(){if(!TIP.el){TIP.el=document.createElement("div");TIP.el.className="tipbox";TIP.el.id="tipBox";TIP.el.setAttribute("role","tooltip");TIP.el.hidden=true;document.body.appendChild(TIP.el)}return TIP.el}
+function tipShow(b,pin){
+  clearTimeout(TIP.t);var el=tipBox();
+  if(TIP.for&&TIP.for!==b)TIP.for.removeAttribute("aria-describedby");
+  TIP.for=b;TIP.pinned=!!pin;el.textContent=b.getAttribute("data-tip");el.hidden=false;b.setAttribute("aria-describedby","tipBox");b.setAttribute("aria-expanded","true");
+  var r=b.getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=window.innerHeight,w=Math.min(340,vw-24);
+  el.style.maxWidth=w+"px";el.style.left="0px";el.style.top="0px";
+  var bw=el.offsetWidth,bh=el.offsetHeight,x=Math.max(12,Math.min(r.left+r.width/2-bw/2,vw-bw-12)),below=r.bottom+10+bh<=vh-8||r.top-10-bh<8,y=below?r.bottom+10:r.top-10-bh;
+  el.style.left=Math.round(x)+"px";el.style.top=Math.round(y)+"px";el.setAttribute("data-pos",below?"below":"above");
+  el.style.setProperty("--ax",Math.round(r.left+r.width/2-x)+"px");
+}
+function tipHide(force){if(TIP.pinned&&!force)return;clearTimeout(TIP.t);if(TIP.el)TIP.el.hidden=true;if(TIP.for){TIP.for.removeAttribute("aria-describedby");TIP.for.setAttribute("aria-expanded","false")}TIP.for=null;TIP.pinned=false}
+document.addEventListener("mouseover",function(e){var b=e.target.closest&&e.target.closest(".hlp[data-tip]");if(b&&!TIP.pinned)tipShow(b)});
+document.addEventListener("mouseout",function(e){var b=e.target.closest&&e.target.closest(".hlp[data-tip]");if(b&&!TIP.pinned&&!(e.relatedTarget&&b.contains(e.relatedTarget)))TIP.t=setTimeout(function(){tipHide()},120)});
+document.addEventListener("focusin",function(e){var b=e.target.closest&&e.target.closest(".hlp[data-tip]");if(b&&!TIP.pinned)tipShow(b)});
+document.addEventListener("focusout",function(e){var b=e.target.closest&&e.target.closest(".hlp[data-tip]");if(b)tipHide(true)});
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest(".hlp[data-tip]");
+  if(b){e.preventDefault();if(TIP.for===b&&TIP.pinned)tipHide(true);else tipShow(b,true);return}
+  if(TIP.pinned&&!(e.target.closest&&e.target.closest(".tipbox")))tipHide(true);
+},true);
+document.addEventListener("keydown",function(e){if(e.key==="Escape"&&TIP.for)tipHide(true)});
+window.addEventListener("scroll",function(){if(TIP.for)tipHide(true)},true);
+window.addEventListener("resize",function(){if(TIP.for)tipHide(true)});
 
 /* ---------- Navigation ---------- */
 function setDrawer(open){$("side").classList.toggle("open",open);$("backdrop").hidden=!open;$("menuBtn").setAttribute("aria-expanded",open?"true":"false")}
