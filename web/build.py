@@ -209,6 +209,10 @@ d_ui2 = rep(d_ui2, '(closed?" · verkauft":"")+\'</span></td><td class="r mono">
 d_ui2 = rep(d_ui2, '  $("sumRows").textContent=act.length?', '  decorateGroups(s);\n  $("sumRows").textContent=act.length?', where="dep groups")
 d_ui2 = rep(d_ui2, 'var p=curPos();if(!p)return;var n=$("eName").value.trim()', 'var p=curPos();if(!p)return;var cv=$("eCat").value.trim().slice(0,30);if(cv)p.cat=cv;else delete p.cat;var n=$("eName").value.trim()', where="dep ecat save")
 d_ui2 = d_ui2.replace("/* Depotverlauf */", rd(SRC, "dep_sort.js") + rd(SRC, "dep_cat.js") + "\n/* Depotverlauf */", 1)
+# Depot-Entwicklung im Depotwert-Kasten
+d_ui2 = cut(d_ui2, "var dChartReq=0;", "function ticksFor(a,b,x){", "dep hist")
+d_ui2 = d_ui2.replace("function ticksFor(a,b,x){", rd(SRC, "dep_hist.js") + "\nfunction ticksFor(a,b,x){", 1)
+d_ui2 = rep(d_ui2, '$("dChart").innerHTML=\'<p class="empty">Verlauf wird geladen …</p>\';loadDepotChart()', 'devHoverOff();$("dChart").innerHTML=\'<p class="empty">Verlauf wird geladen …</p>\';loadDepotChart()', where="dep hist range")
 
 # Alarme: mehrere Wertpapiere, neue Bedingung „± %“
 d_ui3 = cut(d_ui3, '$("alForm").addEventListener("submit"', '$("alList").addEventListener("click"', "dep alarm submit")
@@ -317,6 +321,15 @@ d_html = d_body
 for i in DP_IDS:
     d_html = d_html.replace('id="' + i + '"', 'id="dp' + i[0].upper() + i[1:] + '"').replace('for="' + i + '"', 'for="dp' + i[0].upper() + i[1:] + '"')
 d_html = rep(d_html, 'data-sec="welcome"', 'data-sec="dpwelcome"', where="dp welcome")
+DEV_HTML = ('<div class="dev"><div class="devhead"><span class="lbl">Entwicklung ' + hlp("Wie sich der Wert deines Depots im gewählten Zeitraum entwickelt hat, aus den Schlusskursen und deinem Bestand an jedem Tag.\n\n• Veränderung: Unterschied des Depotwerts zwischen Anfang und Ende.\n• Kursentwicklung: nur die Wertänderung durch Kurse – Käufe und Verkäufe sind herausgerechnet.\n• Käufe − Verkäufe: was du im Zeitraum netto investiert hast (zum Einstand).\n\nFahr mit der Maus über das Diagramm (am Handy: tippen) für den Wert an einem Tag. Dividenden sind nicht enthalten.") + '</span><small class="devmeta" id="dChartMeta"></small>'
+  '<div class="seg" id="dRange" role="radiogroup" aria-label="Zeitraum">'
+  + "".join('<label><input type="radio" name="drg" value="%s"%s><span>%s</span></label>' % (v, " checked" if v == "1y" else "", t) for v, t in [("1w","1 W"),("1mo","1 M"),("6mo","6 M"),("ytd","lfd. Jahr"),("1y","1 J"),("5y","5 J"),("max","Max")])
+  + '</div></div><div class="forecast devkpis" id="devKpis"></div>'
+  '<div class="devwrap"><div class="chartbox" id="dChart"><p class="empty">Verlauf wird geladen …</p></div><div class="devtip" id="devTip" hidden></div></div>'
+  '<div class="legend"><span><i class="sw"></i>Depotwert</span><span><i class="sw goal"></i>Einstand</span><span id="benchLeg"><i class="sw bench"></i><span id="benchLbl">MSCI World</span></span></div></div>')
+d_html = cut(d_html, '<details class="card wide sect" data-sec="dchart"', '</details>', "dchart weg", keep_end=False)
+d_html = rep(d_html, '<details class="card sect" data-sec="val" open><summary><span>Depotwert</span><span class="smeta" id="sumVal"></span></summary>', '<details class="card wide sect" data-sec="val" open><summary><span>Depotwert</span><span class="smeta" id="sumVal"></span></summary>', where="val wide")
+d_html = rep(d_html, '<div class="fc"><span class="lbl">Gesamt</span><b class="eur" id="dTotal">–</b><small id="dTotalSub"></small></div>\n        </div>', '<div class="fc"><span class="lbl">Gesamt</span><b class="eur" id="dTotal">–</b><small id="dTotalSub"></small></div>\n        </div>' + DEV_HTML, where="val dev")
 d_html = rep(d_html, '<section class="view" data-view="auswertung">', '<section class="view" data-view="dauswertung">', where="dp ausw")
 d_html = rep(d_html, '<a href="#auswertung" data-view="auswertung">', '<a href="#dauswertung" data-view="dauswertung">', where="dp ausw nav")
 d_html = rep(d_html, '<div class="fc"><span class="lbl">Kurs-Server</span><p>Die Kurse kommen über ein kleines Python-Skript auf deinem Server. Hier prüfst du die Verbindung.</p><button class="btn" type="button" data-go="einstellungen#setapi">Verbindung prüfen</button></div>',
