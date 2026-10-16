@@ -145,7 +145,11 @@ f_ui3 = rep(f_ui3, '$("loanNone").hidden=!!a;', '$("loanNone").hidden=!!a;if(!a)
 f_ui2 = rep(f_ui2, '$("nmOrd").textContent=D.orders.length||"";', '$("nmOrd").textContent=shownOrders().length||"";', where="hide nmord")
 f_ui3 = rep(f_ui3, '$("ordMeta").textContent=D.orders.length?D.orders.length+" Aufträge":"";', 'var sho=shownOrders().length;$("ordMeta").textContent=sho?sho+" Aufträge":"";', where="hide ordmeta")
 # Kontoauszug einlesen
-f_ui2 = rep(f_ui2, "function renderAccounts(){", "function renderAccounts(){\n  kaFill();", where="ka fill")
+f_ui2 = rep(f_ui2, "function renderAccounts(){", "function renderAccounts(){\n  kaFill();rcFill();", where="ka fill")
+f_ui2 = rep(f_ui2, 'var c=balAt(compute(D).acc[a.id],d);rcDiff={d:d,v:b-c};', 'var c=balAt(compute(D).acc[a.id],d);rcDiff={d:d,v:b-c,acc:a.id};', where="rc acc1")
+f_ui2 = rep(f_ui2, '$("reconMeta").textContent=rcDiff.v===0?"stimmt":"Differenz "+eur(rcDiff.v,true);', '$("reconMeta").textContent=a.name+(rcDiff.v===0?" · stimmt":" · Differenz "+eur(rcDiff.v,true));', where="rc acc2")
+f_ui2 = rep(f_ui2, 'var a=curAcc();if(!rcDiff||!rcDiff.v)return;', 'if(!rcDiff||!rcDiff.v)return;var a=accById(D,rcDiff.acc);if(!a)return;', where="rc acc3")
+f_ui2 = rep(f_ui2, 'setMsg("rcMsg","Korrektur von "+eur(rcDiff.v,true)+" gebucht.");$("reconMeta").textContent="stimmt";', 'setMsg("rcMsg","Korrektur von "+eur(rcDiff.v,true)+" in „"+a.name+"“ gebucht.");$("reconMeta").textContent=a.name+" · stimmt";', where="rc acc4")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_loan.js")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_stmt.js")
 
@@ -272,9 +276,10 @@ KA_CARD = ('<details class="card wide sect" data-sec="kauszug" id="kauszug"><sum
   '<textarea id="kaText" class="katarea" rows="7" spellcheck="false" placeholder="z. B.\n05.10.2026  REWE Markt Kartenzahlung  -45,90 €\n01.10.2026  Gehalt September  +2.500,00 €"></textarea>'
   '<div class="row"><button class="btn primary" type="button" id="kaRead">Auslesen</button><button class="btn ghost" type="button" id="kaClear">Leeren</button></div>'
   '<p class="msg" id="kaMsg" aria-live="polite"></p>'
-  '<div id="kaOut" hidden><p class="kasum" id="kaSum"></p><div class="kabal" id="kaBal"></div>'
-  '<div class="tablewrap"><table class="katab"><thead><tr><th><input type="checkbox" id="kaAll" checked aria-label="alle neuen auswählen"></th><th>Datum</th><th>Text</th><th>Kategorie</th><th class="r">Betrag</th></tr></thead><tbody id="kaBody"></tbody></table></div>'
+  '<div id="kaOut" hidden><p class="kasum" id="kaSum"></p><div class="kaq" id="kaQ" hidden tabindex="-1" aria-live="polite"></div><div class="kabal" id="kaBal"></div>'
+  '<div class="tablewrap"><table class="katab"><thead><tr><th>Übernehmen?</th><th>Datum</th><th>Text</th><th>Kategorie</th><th class="r">Betrag</th></tr></thead><tbody id="kaBody"></tbody></table></div>'
   '<div class="row"><button class="btn primary" type="button" id="kaImport">übernehmen</button></div></div></details>')
+f_body = rep(f_body, '<p class="note">Trag den Stand aus dem Online-Banking ein. Die Differenz zeigt, ob hier etwas fehlt.</p>\n        <div class="txform">', '<p class="note">Trag den Kontostand aus dem Online-Banking für das gewählte Konto ein. Die Differenz zeigt, ob hier etwas fehlt.</p>\n        <div class="txform"><div class="field"><label for="rcAcc">Konto</label><select id="rcAcc"></select></div>', where="rc acc field")
 f_body = rep(f_body, '<details class="card sect" data-sec="recon"', KA_CARD + '\n      <details class="card sect" data-sec="recon"', where="ka card")
 f_body = rep(f_body, '<div class="field"><label for="aRate">Sollzins (% p. a.)</label><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 3,85"></div>',
   '<div class="field span2"><label for="aRate">Zinssatz (% p. a.) ' + hlp(H_RATE) + '</label><span class="ratein"><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 5,24"><select id="aRateType" aria-label="Art des Zinssatzes"><option value="eff">effektiver Jahreszins</option><option value="nom">Sollzins (gebunden)</option></select></span><small class="rateconv" id="aRateConv" aria-live="polite"></small></div>', where="loan rate")

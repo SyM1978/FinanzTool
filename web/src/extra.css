@@ -205,3 +205,22 @@ tr.grp .mkdot{margin-right:8px;cursor:default}
 #dChart g.hov line{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
 #dChart g.hov circle{fill:var(--accent);stroke:var(--surface);stroke-width:2}
 #dChart svg{min-width:0}
+/* Kontoauszug: Frage je Posten */
+.kaq{border:2px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:14px 16px;margin:6px 0 14px;outline:none}
+.kaq.done{border-width:1px;border-color:var(--line);background:var(--surface-2);font-size:14px}
+.kaqhead{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.kaqprog{flex:1;height:6px;background:var(--surface);border-radius:3px;overflow:hidden}
+.kaqprog i{display:block;height:100%;background:var(--accent)}
+.kaqrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;font-size:16px}
+.kaqtext{flex:1 1 220px;font-weight:600;overflow-wrap:anywhere}
+.kaqrow .eur{font-size:18px}
+.kaqnote{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.kaqq{margin:10px 0 8px;font-weight:700}
+.kadec{display:inline-flex;gap:4px}
+.kadec .btn{padding:4px 10px;font-size:13px}
+.kadec .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.kadec [data-kano][aria-pressed="true"]{background:var(--muted);border-color:var(--muted);color:var(--surface)}
+.kadec.na{color:var(--muted);padding-left:10px}
+.katab tr.open td{background:color-mix(in srgb,var(--warn-soft) 55%,transparent)}
+.katab tr.cur td{background:var(--accent-soft)}
+.katab tr.off td:first-child{opacity:1}
