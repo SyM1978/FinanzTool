@@ -21,7 +21,7 @@ with sync_playwright() as p:
     pg.evaluate("SH.showView('konten')"); pg.click("#helpFab"); pg.wait_for_selector("#helpPanel:not([hidden])")
     t = pg.inner_text("#hpBody"); ok("Konten & Buchungen" in t and "Kontoauszug einlesen" in t and "Bankabgleich" in t, "Seitenleiste mit Hilfe zu Konten & Buchungen")
     ok(pg.locator("#hpBody details.hpitem[open]").count() == 1, "erster Artikel aufgeklappt")
-    pg.screenshot(path="tests/shots/120_hilfe_seite.png")
+    pg.screenshot(path="shots/120_hilfe_seite.png")
     # Seitenwechsel aktualisiert die Liste
     pg.evaluate("SH.showView('kredite')"); pg.wait_for_timeout(100)
     ok("Kredit anlegen" in pg.inner_text("#hpBody"), "Liste passt sich der Seite an")
@@ -51,8 +51,8 @@ with sync_playwright() as p:
     ok(pg.evaluate("location.hash") == "#einstellungen", "„Los“ führt zur Funktion")
     pg.fill("#aName","Girokonto"); pg.fill("#aStartDate","2026-10-01"); pg.fill("#aStart","1.000"); pg.click("#accSave"); settle()
     pg.evaluate("SH.showView('hilfe')"); pg.wait_for_timeout(150); ok("1 von 6" in pg.inner_text("#hArt .hcheck"), "Haken nach erledigtem Schritt")
-    pg.screenshot(path="tests/shots/121_hilfe_start.png", full_page=True)
-    pg.click('#hArt .hcard a[data-help="kontoauszug"]'); pg.screenshot(path="tests/shots/122_hilfe_artikel.png", full_page=True)
+    pg.screenshot(path="shots/121_hilfe_start.png", full_page=True)
+    pg.click('#hArt .hcard a[data-help="kontoauszug"]'); pg.screenshot(path="shots/122_hilfe_artikel.png", full_page=True)
     # Neuladen auf #hilfe
     pg.evaluate("location.hash='#hilfe'"); pg.reload(); pg.wait_for_selector("#app:not([hidden])"); pg.wait_for_timeout(300)
     ok(pg.is_visible('section[data-view="hilfe"]') and "Wie können wir helfen" in pg.inner_text("#hArt"), "direkter Aufruf #hilfe")
@@ -66,7 +66,7 @@ with sync_playwright() as p:
     # Handy
     pg.set_viewport_size({"width": 390, "height": 844}); pg.evaluate("SH.showView('depot')"); pg.click("#helpFab"); pg.wait_for_timeout(150)
     bx = pg.eval_on_selector("#helpPanel", "e=>e.getBoundingClientRect().width"); ok(bx <= 390, "Seitenleiste am Handy volle Breite")
-    pg.screenshot(path="tests/shots/123_hilfe_mobil.png"); pg.keyboard.press("Escape")
+    pg.screenshot(path="shots/123_hilfe_mobil.png"); pg.keyboard.press("Escape")
     pg.evaluate("SH.showView('hilfe')"); ok(pg.evaluate("document.documentElement.scrollWidth<=390"), "Handy: kein seitliches Scrollen")
     ok(not errs, "keine JS-Fehler " + str(errs))
     b.close()
