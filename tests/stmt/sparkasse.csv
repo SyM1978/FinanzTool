@@ -1,0 +1,4 @@
+"Auftragskonto";"Buchungstag";"Valutadatum";"Buchungstext";"Verwendungszweck";"Glaeubiger ID";"Mandatsreferenz";"Kundenreferenz (End-to-End)";"Sammlerreferenz";"Lastschrift Ursprungsbetrag";"Auslagenersatz Ruecklastschrift";"Beguenstigter/Zahlungspflichtiger";"Kontonummer/IBAN";"BIC (SWIFT-Code)";"Betrag";"Waehrung";"Info"
+"DE00123";"01.10.26";"01.10.26";"GUTSCHR. UEBERWEISUNG";"LOHN/GEHALT 09/2026";"";"";"";"";"";"";"Jobcenter Moenchengladbach";"DE111";"XXX";"3.150,42";"EUR";"Umsatz gebucht"
+"DE00123";"02.10.26";"02.10.26";"FOLGELASTSCHRIFT";"Miete Oktober";"";"";"";"";"";"";"Vermieter GmbH";"DE222";"YYY";"-850,00";"EUR";"Umsatz gebucht"
+"DE00123";"05.10.26";"05.10.26";"KARTENZAHLUNG";"REWE SAGT DANKE 123";"";"";"";"";"";"";"REWE Markt GmbH";"DE333";"ZZZ";"-45,90";"EUR";"Umsatz gebucht"

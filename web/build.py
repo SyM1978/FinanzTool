@@ -144,9 +144,12 @@ f_ui3 = rep(f_ui3, 'var a=curLoan(),l=D.accounts.filter(isLoan);', 'var a=curLoa
 f_ui3 = rep(f_ui3, '$("loanNone").hidden=!!a;', '$("loanNone").hidden=!!a;if(!a){var gn=D.accounts.filter(loanGone).length;if(ui.loanNoneH==null)ui.loanNoneH=$("loanNone").innerHTML;$("loanNone").innerHTML=gn?(gn===1?"Dein Kredit ist getilgt und ausgeblendet. Du findest ihn":"Alle "+gn+" Kredite sind getilgt und ausgeblendet. Du findest sie")+\' weiter unter <button class="linkbtn" type="button" data-go="einstellungen#konten">Einstellungen › Konten</button>.\':ui.loanNoneH}', where="hide loannone")
 f_ui2 = rep(f_ui2, '$("nmOrd").textContent=D.orders.length||"";', '$("nmOrd").textContent=shownOrders().length||"";', where="hide nmord")
 f_ui3 = rep(f_ui3, '$("ordMeta").textContent=D.orders.length?D.orders.length+" Aufträge":"";', 'var sho=shownOrders().length;$("ordMeta").textContent=sho?sho+" Aufträge":"";', where="hide ordmeta")
+# Kontoauszug einlesen
+f_ui2 = rep(f_ui2, "function renderAccounts(){", "function renderAccounts(){\n  kaFill();", where="ka fill")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_loan.js")
+f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_stmt.js")
 
-fin_js = ("var FIN=(function(SH){\n\"use strict\";\n" + f_core + "\n" + rd(SRC, "fin_pre.js").replace("/*UI*/", f_ui) + "\n" + f_helpers + "\n"
+fin_js = (rd(SRC, "stmt_parse.js").replace("if(typeof module!==\"undefined\"&&module.exports)module.exports=STMT;", "") + "\nvar FIN=(function(SH){\n\"use strict\";\n" + f_core + "\n" + rd(SRC, "fin_pre.js").replace("/*UI*/", f_ui) + "\n" + f_helpers + "\n"
           + f_ui2 + "\n" + f_ui3 + "\n" + f_ui4 + "\n" + rd(SRC, "fin_post.js") + "\n})(SH);\n")
 
 # =====================================================================
@@ -258,6 +261,17 @@ dep_js = ("var DEP=(function(SH){\n\"use strict\";\n" + d_base + "\n" + d_calc +
 # Seite zusammensetzen
 # =====================================================================
 f_body, d_body = rd(FIN, "body.html"), rd(DEP, "body.html")
+KA_CARD = ('<details class="card wide sect" data-sec="kauszug" id="kauszug"><summary><span>Kontoauszug einlesen</span><span class="smeta" id="kaMeta"></span></summary>'
+  '<p class="note">Füg die Umsätze aus dem Online-Banking oder einem PDF-Auszug ein, oder lade die CSV-Datei deiner Bank. Du siehst vorher, was übernommen wird. ' + hlp("So geht’s:\n\n• Online-Banking: Umsatzliste markieren (Strg+A), kopieren (Strg+C) und hier einfügen (Strg+V).\n• PDF-Kontoauszug: PDF öffnen, Text markieren und kopieren, hier einfügen.\n• CSV-Export der Bank (Sparkasse, Volksbank, DKB, ING, comdirect …): Datei wählen.\n\nErkannt werden Datum, Text und Betrag. Was schon gebucht ist, wird nicht doppelt übernommen. Passende Daueraufträge werden bestätigt.") + '</p>'
+  '<div class="txform"><div class="field"><label for="kaAcc">In Konto</label><select id="kaAcc"></select></div>'
+  '<div class="field span2"><label for="kaFile">oder CSV-/Textdatei</label><input type="file" id="kaFile" accept=".csv,.txt,.tsv,text/csv,text/plain"></div></div>'
+  '<textarea id="kaText" class="katarea" rows="7" spellcheck="false" placeholder="z. B.\n05.10.2026  REWE Markt Kartenzahlung  -45,90 €\n01.10.2026  Gehalt September  +2.500,00 €"></textarea>'
+  '<div class="row"><button class="btn primary" type="button" id="kaRead">Auslesen</button><button class="btn ghost" type="button" id="kaClear">Leeren</button></div>'
+  '<p class="msg" id="kaMsg" aria-live="polite"></p>'
+  '<div id="kaOut" hidden><p class="kasum" id="kaSum"></p><div class="kabal" id="kaBal"></div>'
+  '<div class="tablewrap"><table class="katab"><thead><tr><th><input type="checkbox" id="kaAll" checked aria-label="alle neuen auswählen"></th><th>Datum</th><th>Text</th><th>Kategorie</th><th class="r">Betrag</th></tr></thead><tbody id="kaBody"></tbody></table></div>'
+  '<div class="row"><button class="btn primary" type="button" id="kaImport">übernehmen</button></div></div></details>')
+f_body = rep(f_body, '<details class="card sect" data-sec="recon"', KA_CARD + '\n      <details class="card sect" data-sec="recon"', where="ka card")
 f_body = rep(f_body, '<div class="field"><label for="aRate">Sollzins (% p. a.)</label><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 3,85"></div>',
   '<div class="field span2"><label for="aRate">Zinssatz (% p. a.) ' + hlp(H_RATE) + '</label><span class="ratein"><input type="text" id="aRate" class="amtin" inputmode="decimal" placeholder="z. B. 5,24"><select id="aRateType" aria-label="Art des Zinssatzes"><option value="eff">effektiver Jahreszins</option><option value="nom">Sollzins (gebunden)</option></select></span><small class="rateconv" id="aRateConv" aria-live="polite"></small></div>', where="loan rate")
 f_body = rep(f_body, '<label for="aPay">Monatsrate (€)</label>', '<label for="aPay">Monatsrate (€) ' + hlp(H_PAY) + '</label>', where="loan pay")

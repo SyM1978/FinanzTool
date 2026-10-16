@@ -1,0 +1,3 @@
+Buchungstag;Valuta;Textschlüssel;Primanota;Zahlungsempfänger;ZahlungsempfängerKto;ZahlungsempfängerIBAN;ZahlungsempfängerBLZ;ZahlungsempfängerBIC;Vorgang/Verwendungszweck;Kundenreferenz;Währung;Umsatz;Soll/Haben
+08.10.2026;08.10.2026;Lastschrift;123;Telekom;;DE9;;;Rechnung 0815;;EUR;39,95;S
+09.10.2026;09.10.2026;Gutschrift;124;Oma;;DE8;;;Geburtstag;;EUR;50,00;H

@@ -1,0 +1,10 @@
+Kontoauszug 10/2026 vom 01.10.2026 bis 15.10.2026
+Datum Wert Erläuterung Betrag Soll EUR Betrag Haben EUR
+Kontostand am 30.09.2026, Auszug Nr. 9 1.104,12
+01.10. 01.10. Lastschrift
+Stadtwerke Geilenkirchen
+Abschlag 10/2026 89,00-
+02.10. 02.10. Gutschrift
+Kindergeld Familienkasse 255,00+
+05.10. 05.10. Kartenzahlung REWE 45,90-
+Kontostand am 15.10.2026 um 20:12 Uhr 1.224,22
