@@ -366,6 +366,8 @@ dep_setdep = section(d_html, "setdep", "dep")
 
 top = rd(SRC, "shell_top.html").replace("%%NAV_FIN%%", fin_nav).replace("%%NAV_DEP%%", dep_nav)
 settings = rd(SRC, "shell_settings.html").replace("%%FIN_SETTINGS%%", fin_sets).replace("%%DEP_SETDEP%%", dep_setdep)
+settings = settings.replace('  <datalist id="catList"></datalist>', rd(SRC, "help.html") + '\n  <datalist id="catList"></datalist>', 1)
+assert "helpFab" in settings
 body = top + "\n" + rd(SRC, "dashboard.html") + "\n" + fin_views + "\n" + dep_views + "\n" + settings
 
 css = rd(DEP, "css_a.css")
@@ -373,7 +375,7 @@ css = rep(css, "family=JetBrains+Mono:wght@400;600&", "family=JetBrains+Mono:wgh
 css = rep(css, "<title>Mein Zeitkonto</title>", "<title>Meine Finanzen</title>", where="css title")
 css += rd(DEP, "css_b.css") + rd(DEP, "css_c.css") + rd(DEP, "css_d.css") + rd(SRC, "extra.css") + "</style>\n\n"
 
-js = rd(SRC, "shell.js") + "\n" + fin_js + "\n" + dep_js + "\n" + rd(SRC, "dashboard.js") + "\nSH.boot();\n"
+js = rd(SRC, "shell.js") + "\n" + fin_js + "\n" + dep_js + "\n" + rd(SRC, "dashboard.js") + "\n" + rd(SRC, "help_content.js") + "\n" + rd(SRC, "help.js") + "\nSH.boot();\n"
 page = css + body + "\n<script>\n" + js + "</script>\n"
 os.makedirs("out", exist_ok=True)
 open("out/app.js", "w", encoding="utf-8").write(js)

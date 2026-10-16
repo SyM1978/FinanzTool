@@ -5,7 +5,7 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.10.0",VDATE="2026-10-16";
+var VERSION="1.11.0",VDATE="2026-10-16";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
@@ -266,6 +266,7 @@ window.addEventListener("scroll",function(){if(TIP.for)tipHide(true)},true);
 window.addEventListener("resize",function(){if(TIP.for)tipHide(true)});
 
 /* ---------- Navigation ---------- */
+var VHOOKS=[];
 function setDrawer(open){$("side").classList.toggle("open",open);$("backdrop").hidden=!open;$("menuBtn").setAttribute("aria-expanded",open?"true":"false")}
 function showView(v,anchor){
   if(!VIEWS[v])v="dashboard";curView=v;
@@ -279,6 +280,7 @@ function showView(v,anchor){
   if(v==="einstellungen")renderShellSettings();
   if(v==="dashboard")renderDash();
   DEPm.onView(v,anchor);
+  VHOOKS.forEach(function(f){try{f(v)}catch(e){}});
   var el=anchor&&$(anchor);
   if(el){if(el.tagName==="DETAILS")el.open=true;setTimeout(function(){try{el.scrollIntoView({block:"start"})}catch(e){}},0)}
   else try{window.scrollTo(0,0)}catch(e){}
@@ -717,7 +719,7 @@ function boot(){
   }).catch(function(e){$("bootMsg").textContent="Server nicht erreichbar: "+e.message+" Bitte später neu laden."});
 }
 
-return {VERSION:VERSION,VDATE:VDATE,$:$,esc:esc,P:P,VIEWS:VIEWS,api:api,boot:boot,changed:changed,showView:showView,setDrawer:setDrawer,applyLook:applyLook,applySect:applySect,
+return {curView:function(){return curView},onView:function(f){VHOOKS.push(f)},VERSION:VERSION,VDATE:VDATE,$:$,esc:esc,P:P,VIEWS:VIEWS,api:api,boot:boot,changed:changed,showView:showView,setDrawer:setDrawer,applyLook:applyLook,applySect:applySect,
   setMsg:setMsg,armed:armed,download:download,sessionLost:sessionLost,refreshMe:refreshMe,user:function(){return USER},cashPicker:cashPicker,divAccOptions:divAccOptions,divAccLabel:divAccLabel,
   depotValue:function(){return DEPm?DEPm.value():null},sharedBadge:sharedBadge,preview:PREVIEW,_D:function(){return D},_export:function(){return toExport(D)},_sync:SYNC,_pending:pending,_push:pushNow};
 })();

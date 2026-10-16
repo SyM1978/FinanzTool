@@ -1,0 +1,16 @@
+  <!-- Hilfe -->
+  <section class="view" data-view="hilfe">
+    <div class="plantools"><h1 class="vtitle">Hilfe</h1></div>
+    <div class="helpsearch"><input type="search" id="hSearch" placeholder="Wonach suchst du? z. B. Kredit, Dividende, Kontoauszug …" aria-label="Hilfe durchsuchen" autocomplete="off"></div>
+    <div class="helplayout">
+      <nav class="helptoc card" id="hToc" aria-label="Hilfethemen"></nav>
+      <article class="card helpart" id="hArt" aria-live="polite"></article>
+    </div>
+  </section>
+  <button type="button" class="helpfab" id="helpFab" aria-label="Hilfe zu dieser Seite (F1)" title="Hilfe zu dieser Seite (F1)">?</button>
+  <aside class="helppanel" id="helpPanel" hidden role="dialog" aria-modal="false" aria-labelledby="hpTitle">
+    <div class="hphead"><b id="hpTitle">Hilfe</b><button type="button" class="hpx" id="hpClose" aria-label="Hilfe schließen">×</button></div>
+    <div class="hpsearch"><input type="search" id="hpSearch" placeholder="Hilfe durchsuchen …" aria-label="Hilfe durchsuchen" autocomplete="off"></div>
+    <div class="hpbody" id="hpBody"></div>
+    <div class="hpfoot"><button type="button" class="btn" id="hpAll">Alle Hilfethemen</button></div>
+  </aside>
