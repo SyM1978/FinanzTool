@@ -39,8 +39,8 @@ td.pnc .pn{display:inline}
 .mkc:hover{transform:scale(1.15)}
 .mkc.none{background:var(--surface-2);color:var(--muted);font-size:13px;line-height:18px;text-align:center}
 /* ===== Anmeldung ===== */
-.ghead{display:flex;flex-direction:column;gap:12px;text-align:center}
-.ghead .logotile{width:min(150px,45vw)}
+.gatehead{display:flex;flex-direction:column;gap:12px;text-align:center}
+.gatehead .logotile{width:min(150px,45vw)}
 .gtabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px}
 .gtabs[hidden]{display:none}
 .gtabs button{all:unset;text-align:center;padding:9px 8px;border-radius:9px;font-weight:600;font-size:14.5px;color:var(--muted);cursor:pointer}
@@ -371,3 +371,11 @@ body.hpopen .helpfab{right:calc(min(420px,100vw) + 20px)}
 .bzc-link label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
 .bzc-act{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .bztab .bzopen{color:var(--muted)}
+
+/* Finanzplan: Gesamt-Spalte rechts fest, aktueller Monat hervorgehoben */
+table.plan th:last-child,table.plan td:last-child{position:sticky;right:0;z-index:1;background:var(--surface);border-left:1px solid var(--line);font-weight:600}
+table.plan thead th:last-child{z-index:2}
+table.plan tr.ghead td:last-child{background:var(--surface-2)}
+table.plan tr.ksec td:last-child{background:var(--accent-soft)}
+#planTable[data-cm="2"] tr>*:nth-child(2),#planTable[data-cm="3"] tr>*:nth-child(3),#planTable[data-cm="4"] tr>*:nth-child(4),#planTable[data-cm="5"] tr>*:nth-child(5),#planTable[data-cm="6"] tr>*:nth-child(6),#planTable[data-cm="7"] tr>*:nth-child(7),#planTable[data-cm="8"] tr>*:nth-child(8),#planTable[data-cm="9"] tr>*:nth-child(9),#planTable[data-cm="10"] tr>*:nth-child(10),#planTable[data-cm="11"] tr>*:nth-child(11),#planTable[data-cm="12"] tr>*:nth-child(12),#planTable[data-cm="13"] tr>*:nth-child(13){box-shadow:inset 1px 0 0 var(--accent),inset -1px 0 0 var(--accent)}
+#planTable thead th{color:var(--muted)}

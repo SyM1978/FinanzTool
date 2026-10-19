@@ -153,6 +153,8 @@ f_ui2 = rep(f_ui2, 'setMsg("rcMsg","Korrektur von "+eur(rcDiff.v,true)+" gebucht
 # Ein- & Ausgaben
 f_ui2 = rep(f_ui2, "renderPlan();renderReport();renderSettings();updateCats();", "renderPlan();renderReport();renderSettings();updateCats();bzRender();", where="bz renderall")
 f_ui3 = rep(f_ui3, "planTimer=setTimeout(function(){renderPlan();renderOverview();renderReport();updateCats();renderHead()},0)", "planTimer=setTimeout(function(){renderPlan();renderOverview();renderReport();updateCats();renderHead();bzRender()},0)", where="bz plan")
+# Finanzplan: aktueller Monat hervorgehoben
+f_ui3 = rep(f_ui3, '  $("planTable").innerHTML=h.join("");', '  $("planTable").innerHTML=h.join("");$("planTable").setAttribute("data-cm",y===cy?String(cm+2):"");', where="plan cm")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_loan.js")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_bilanz.js")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_stmt.js")
