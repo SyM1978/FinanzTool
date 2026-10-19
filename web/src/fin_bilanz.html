@@ -1,0 +1,21 @@
+  <!-- Ein- & Ausgaben -->
+  <section class="view" data-view="bilanz">
+    <div class="plantools"><h1 class="vtitle">Ein- &amp; Ausgaben</h1>
+      <div class="bztools">
+        <div class="monthnav"><button class="navbtn" id="bzPrev" type="button" aria-label="Zurück">‹</button><span id="bzLabel"></span><button class="navbtn" id="bzNext" type="button" aria-label="Weiter">›</button></div>
+        <button class="btn ghost" id="bzToday" type="button">Heute</button>
+        <div class="seg" id="bzMode" role="radiogroup" aria-label="Zeitraum"><label><input type="radio" name="bzm" value="month" checked><span>Monat</span></label><label><input type="radio" name="bzm" value="year"><span>Jahr</span></label></div>
+        <label class="check"><input type="checkbox" id="bzIst" checked> Ist anzeigen</label>
+      </div>
+    </div>
+    <div class="kpis bzkpis" id="bzKpis"></div>
+    <details class="card wide sect" data-sec="bilanz" open><summary><span>Einnahmen und Ausgaben</span><span class="smeta" id="bzMeta"></span></summary>
+      <p class="empty" id="bzEmpty" hidden>Für <span id="bzEmptyY"></span> gibt es noch keine Planung. Leg sie im <button class="linkbtn" type="button" data-go="plan">Finanzplan</button> an oder übernimm deine Excel unter <button class="linkbtn" type="button" data-go="einstellungen">Einstellungen › Excel-Import</button>.</p>
+      <div id="bzWrap">
+        <div class="bzhint"><span>Fahr mit der Maus über einen Posten für Details, z. B. den Stand des Sparkontos. Klick auf einen Betrag, um ihn zu ändern.</span><label class="check" id="bzFillWrap"><input type="checkbox" id="bzFill"> Änderung auch für die Folgemonate</label></div>
+        <div class="tablewrap"><table class="bztab" id="bzTable"><thead id="bzHead"></thead><tbody id="bzBody"></tbody><tfoot id="bzFoot"></tfoot></table></div>
+      </div>
+      <p class="msg" id="bzMsg" aria-live="polite"></p>
+    </details>
+    <div class="bzcard" id="bzCard" hidden role="dialog" aria-label="Details zum Posten"></div>
+  </section>

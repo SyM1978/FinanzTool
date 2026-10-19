@@ -150,7 +150,11 @@ f_ui2 = rep(f_ui2, 'var c=balAt(compute(D).acc[a.id],d);rcDiff={d:d,v:b-c};', 'v
 f_ui2 = rep(f_ui2, '$("reconMeta").textContent=rcDiff.v===0?"stimmt":"Differenz "+eur(rcDiff.v,true);', '$("reconMeta").textContent=a.name+(rcDiff.v===0?" · stimmt":" · Differenz "+eur(rcDiff.v,true));', where="rc acc2")
 f_ui2 = rep(f_ui2, 'var a=curAcc();if(!rcDiff||!rcDiff.v)return;', 'if(!rcDiff||!rcDiff.v)return;var a=accById(D,rcDiff.acc);if(!a)return;', where="rc acc3")
 f_ui2 = rep(f_ui2, 'setMsg("rcMsg","Korrektur von "+eur(rcDiff.v,true)+" gebucht.");$("reconMeta").textContent="stimmt";', 'setMsg("rcMsg","Korrektur von "+eur(rcDiff.v,true)+" in „"+a.name+"“ gebucht.");$("reconMeta").textContent=a.name+" · stimmt";', where="rc acc4")
+# Ein- & Ausgaben
+f_ui2 = rep(f_ui2, "renderPlan();renderReport();renderSettings();updateCats();", "renderPlan();renderReport();renderSettings();updateCats();bzRender();", where="bz renderall")
+f_ui3 = rep(f_ui3, "planTimer=setTimeout(function(){renderPlan();renderOverview();renderReport();updateCats();renderHead()},0)", "planTimer=setTimeout(function(){renderPlan();renderOverview();renderReport();updateCats();renderHead();bzRender()},0)", where="bz plan")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_loan.js")
+f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_bilanz.js")
 f_ui4 = f_ui4 + "\n" + rd(SRC, "fin_stmt.js")
 
 fin_js = (rd(SRC, "stmt_parse.js").replace("if(typeof module!==\"undefined\"&&module.exports)module.exports=STMT;", "") + "\nvar FIN=(function(SH){\n\"use strict\";\n" + f_core + "\n" + rd(SRC, "fin_pre.js").replace("/*UI*/", f_ui) + "\n" + f_helpers + "\n"
@@ -317,10 +321,14 @@ def nav(body, where):
 
 
 fin_views = views(f_body, ["uebersicht", "konten", "auftraege", "kredite", "plan", "auswertung"], "fin")
+fin_views = fin_views.replace('  <section class="view" data-view="konten">', rd(SRC, "fin_bilanz.html") + '\n  <section class="view" data-view="konten">', 1)
+assert 'data-view="bilanz"' in fin_views
 fin_sets = section(f_body, "setacc", "fin") + "\n" + section(f_body, "setimport", "fin")
 fin_sets = rep(fin_sets, '<p class="hintline">Die Importdatei enthält deine Zahlen unverschlüsselt. Lösche sie nach dem Import oder bewahre sie sicher auf.</p>',
                '<p class="hintline">Die Datei selbst bleibt auf deinem Rechner. Übernommen werden nur die Planwerte, sie liegen danach in deinem Konto auf dem Server.</p>', where="imp hint")
 fin_nav = nav(f_body, "fin")
+_ln = [l for l in fin_nav.split("\n") if 'data-view="uebersicht"' in l][0]
+fin_nav = fin_nav.replace(_ln, _ln + '\n      <a href="#bilanz" data-view="bilanz"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/><path d="M17 15l3 3-3 3"/></svg><span>Ein- &amp; Ausgaben</span><span class="nm" id="nmBz"></span></a>', 1)
 
 d_html = d_body
 for i in DP_IDS:

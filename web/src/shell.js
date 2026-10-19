@@ -5,16 +5,16 @@
    ===================================================================== */
 var SH=(function(){
 "use strict";
-var VERSION="1.11.0",VDATE="2026-10-16";
+var VERSION="1.12.0",VDATE="2026-10-19";
 var PREVIEW=!!window.MF_PREVIEW||location.protocol==="file:"||(function(){try{return window.self!==window.top}catch(e){return true}})();
 var $=function(id){return document.getElementById(id)};
 var esc=function(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})};
 var P={name:"",email:"",id:""},USER={},D=null,REG=null,started=false;
 var FINm=null,DEPm=null;   /* werden nach dem Laden der Module gesetzt */
 
-var VIEWS={dashboard:"Dashboard",uebersicht:"Übersicht",konten:"Konten & Buchungen",auftraege:"Daueraufträge",kredite:"Kredite",plan:"Finanzplan",auswertung:"Auswertung Finanzen",
+var VIEWS={dashboard:"Dashboard",uebersicht:"Übersicht",bilanz:"Ein- & Ausgaben",konten:"Konten & Buchungen",auftraege:"Daueraufträge",kredite:"Kredite",plan:"Finanzplan",auswertung:"Auswertung Finanzen",
   depot:"Depot",zeitung:"Aktienzeitung",position:"Position",watchlist:"Watchlist",alarme:"Kursalarme",neu:"Erfassen & Import",dauswertung:"Auswertung Depot",einstellungen:"Einstellungen"};
-var OWNER={dashboard:"dash",uebersicht:"fin",konten:"fin",auftraege:"fin",kredite:"fin",plan:"fin",auswertung:"fin",depot:"dep",zeitung:"dep",position:"dep",watchlist:"dep",alarme:"dep",neu:"dep",dauswertung:"dep",einstellungen:"both"};
+var OWNER={dashboard:"dash",uebersicht:"fin",bilanz:"fin",konten:"fin",auftraege:"fin",kredite:"fin",plan:"fin",auswertung:"fin",depot:"dep",zeitung:"dep",position:"dep",watchlist:"dep",alarme:"dep",neu:"dep",dauswertung:"dep",einstellungen:"both"};
 var curView="uebersicht",stale={fin:false,dep:false};
 
 /* ---------- Server ---------- */
