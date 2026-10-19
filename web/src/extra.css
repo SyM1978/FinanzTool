@@ -379,3 +379,4 @@ table.plan tr.ghead td:last-child{background:var(--surface-2)}
 table.plan tr.ksec td:last-child{background:var(--accent-soft)}
 #planTable[data-cm="2"] tr>*:nth-child(2),#planTable[data-cm="3"] tr>*:nth-child(3),#planTable[data-cm="4"] tr>*:nth-child(4),#planTable[data-cm="5"] tr>*:nth-child(5),#planTable[data-cm="6"] tr>*:nth-child(6),#planTable[data-cm="7"] tr>*:nth-child(7),#planTable[data-cm="8"] tr>*:nth-child(8),#planTable[data-cm="9"] tr>*:nth-child(9),#planTable[data-cm="10"] tr>*:nth-child(10),#planTable[data-cm="11"] tr>*:nth-child(11),#planTable[data-cm="12"] tr>*:nth-child(12),#planTable[data-cm="13"] tr>*:nth-child(13){box-shadow:inset 1px 0 0 var(--accent),inset -1px 0 0 var(--accent)}
 #planTable thead th{color:var(--muted)}
+.bzistchk{font-weight:600}

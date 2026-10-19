@@ -1,6 +1,6 @@
 /* ---------- Ein- & Ausgaben: Übersicht wie die Excel-Tabelle, mit Info-Karte je Posten und Ändern per Klick ---------- */
 var BZ={y:null,m:null,mode:"month",ist:true,fill:false,pin:null,edit:null};
-function bzInit(){var t=parseKey(todayKey());if(BZ.y==null){BZ.y=t.getFullYear();BZ.m=t.getMonth()}}
+function bzInit(){var t=parseKey(todayKey());if(BZ.y==null){BZ.y=t.getFullYear();BZ.m=t.getMonth()}BZ.ist=!(D.settings&&D.settings.bzIst===false)}
 function bzSum(a,from,to){var s=0;for(var i=from;i<=to;i++)s+=+a[i]||0;return s}
 /* Bis zu welchem Monat gibt es schon Ist-Werte? (-1 = keiner, 11 = ganzes Jahr) */
 function bzIstUntil(y){var t=parseKey(todayKey()),cy=t.getFullYear();return y<cy?11:y>cy?-1:t.getMonth()}
@@ -87,8 +87,9 @@ function bzCard(gi,ii){
   var L=bzLink(it),v=bzVals(it,y),month=BZ.mode==="month",h=[];
   h.push('<div class="bzc-h"><b>'+esc(it.name)+'</b><span>'+esc(g.name)+" · "+KLABEL[g.kind]+"</span></div>");
   var iu=bzIstUntil(+y),yp=bzSum(it.m,0,11),yi=0;if(iu>=0)for(var i=0;i<=iu;i++)yi+=istOf(D,y,it.name,i);
-  h.push('<div class="bzc-g"><span>Plan '+(month?MON[BZ.m]:y)+'</span><b>'+esc(eur(v.plan))+"</b><span>Ist "+(month?MON[BZ.m]:"bis heute")+"</span><b>"+(v.ist==null?"–":esc(eur(v.ist)))+"</b>"+
-    (month?"<span>Plan "+y+"</span><b>"+esc(eur(yp))+"</b><span>Ist "+y+" bis heute</span><b>"+esc(eur(yi))+"</b>":"")+"</div>");
+  var si=BZ.ist;
+  h.push('<div class="bzc-g"><span>Plan '+(month?MON[BZ.m]:y)+'</span><b>'+esc(eur(v.plan))+"</b>"+(si?"<span>Ist "+(month?MON[BZ.m]:"bis heute")+"</span><b>"+(v.ist==null?"–":esc(eur(v.ist)))+"</b>":"")+
+    (month?"<span>Plan "+y+"</span><b>"+esc(eur(yp))+"</b>"+(si?"<span>Ist "+y+" bis heute</span><b>"+esc(eur(yi))+"</b>":""):"")+"</div>");
   if(L.acc){
     var a=L.acc,f=forecast(D,a);
     h.push('<div class="bzc-s"><span class="lbl"><i class="cdot" style="--c:'+esc(a.color)+'"></i> '+esc(a.name)+(L.manual?"":" (automatisch erkannt)")+"</span>");
@@ -105,7 +106,7 @@ function bzCard(gi,ii){
       (month&&g.kind!=="einnahme"&&INTV[o.interval].n===1&&+it.m[BZ.m]&&+it.m[BZ.m]!==o.amount?'<button type="button" class="btn bzc-btn" data-bzorder="'+gi+"|"+ii+'">Dauerauftrag auf '+esc(eur(+it.m[BZ.m]))+" ändern</button>":"")+"</div>");
   }
   var last=D.tx.filter(function(t){return t.cat&&t.cat.toLowerCase()===it.name.toLowerCase()&&t.date<=todayKey()}).sort(function(a,b){return a.date<b.date?1:-1}).slice(0,3);
-  if(last.length)h.push('<div class="bzc-s"><span class="lbl">Letzte Buchungen</span>'+last.map(function(t){return '<div class="bzc-l"><span>'+dm(t.date)+" "+esc(t.text||"")+'</span><b class="mono '+amtCls(t.amount)+'">'+esc(eur(t.amount,true))+"</b></div>"}).join("")+"</div>");
+  if(last.length&&BZ.ist)h.push('<div class="bzc-s"><span class="lbl">Letzte Buchungen</span>'+last.map(function(t){return '<div class="bzc-l"><span>'+dm(t.date)+" "+esc(t.text||"")+'</span><b class="mono '+amtCls(t.amount)+'">'+esc(eur(t.amount,true))+"</b></div>"}).join("")+"</div>");
   if(!L.acc&&!L.order&&!last.length)h.push('<p class="bzc-hint">Noch keine Buchungen in der Kategorie „'+esc(it.name)+"“. Buchungen und Daueraufträge mit dieser Kategorie zählen als Ist.</p>");
   if(BZ.pin){
     var opts='<option value="">automatisch'+(L.auto?" ("+esc(L.auto.name)+")":"")+'</option><option value="-">kein Konto</option>'+D.accounts.filter(function(a){return !a.shared}).map(function(a){return '<option value="'+esc(a.id)+'"'+(it.acc===a.id?" selected":"")+">"+esc(a.name)+"</option>"}).join("");
@@ -173,5 +174,5 @@ $("bzPrev").addEventListener("click",function(){if(BZ.mode==="month"){BZ.m--;if(
 $("bzNext").addEventListener("click",function(){if(BZ.mode==="month"){BZ.m++;if(BZ.m>11){BZ.m=0;BZ.y++}}else BZ.y++;bzHide(true);bzRender()});
 $("bzToday").addEventListener("click",function(){BZ.y=null;bzInit();bzHide(true);bzRender()});
 $("bzMode").addEventListener("change",function(e){BZ.mode=e.target.value==="year"?"year":"month";bzHide(true);bzRender()});
-$("bzIst").addEventListener("change",function(){BZ.ist=this.checked;bzRender()});
+$("bzIst").addEventListener("change",function(){BZ.ist=this.checked;if(BZ.ist)delete D.settings.bzIst;else D.settings.bzIst=false;save();bzRender();if(BZ.pin)bzShowCard(BZ.pin.g,BZ.pin.i,null,true)});
 $("bzFill").addEventListener("change",function(){BZ.fill=this.checked});
